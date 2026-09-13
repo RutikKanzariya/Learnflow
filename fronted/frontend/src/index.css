@@ -1,0 +1,1401 @@
+/* =========================
+   Global
+========================= */
+
+* {
+  box-sizing: border-box;
+}
+
+:root {
+  font-family:
+    Inter,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+
+  color: #172033;
+  background: #f5f7fb;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: #f5f7fb;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+button {
+  border: none;
+}
+
+a {
+  color: inherit;
+}
+
+
+/* =========================
+   Navbar
+========================= */
+
+.navbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  padding: 16px 40px;
+
+  background: rgba(255, 255, 255, 0.96);
+  border-bottom: 1px solid #e6e9f0;
+
+  backdrop-filter: blur(10px);
+}
+
+.navbar-brand a {
+  text-decoration: none;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+.navbar-links {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.navbar-links a {
+  text-decoration: none;
+  color: #5b6475;
+  font-size: 14px;
+  font-weight: 600;
+
+  transition: color 0.2s ease;
+}
+
+.navbar-links a:hover {
+  color: #4f46e5;
+}
+
+.navbar-links span {
+  color: #374151;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.navbar-links button {
+  padding: 9px 16px;
+
+  border-radius: 8px;
+
+  background: #172033;
+  color: white;
+
+  font-weight: 600;
+  cursor: pointer;
+
+  transition:
+    transform 0.2s ease,
+    background 0.2s ease;
+}
+
+.navbar-links button:hover {
+  background: #30394d;
+  transform: translateY(-1px);
+}
+
+
+/* =========================
+   Main Dashboard
+========================= */
+
+.dashboard {
+  width: min(1100px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: 48px 0 70px;
+}
+
+.dashboard > header {
+  margin-bottom: 32px;
+}
+
+.dashboard h1 {
+  margin: 0 0 8px;
+
+  font-size: 36px;
+  line-height: 1.15;
+  letter-spacing: -1px;
+}
+
+.dashboard > header p {
+  margin: 0;
+  color: #697386;
+  font-size: 16px;
+}
+
+
+/* =========================
+   Stats
+========================= */
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+
+  margin-top: 28px;
+}
+
+.stat-card {
+  padding: 24px;
+
+  background: white;
+  border: 1px solid #e7eaf0;
+  border-radius: 16px;
+
+  box-shadow:
+    0 4px 14px rgba(20, 30, 50, 0.04);
+
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-3px);
+
+  box-shadow:
+    0 12px 28px rgba(20, 30, 50, 0.08);
+}
+
+.stat-card h2 {
+  margin: 0 0 12px;
+
+  font-size: 21px;
+}
+
+.stat-card h3 {
+  margin: 0 0 10px;
+
+  color: #697386;
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.stat-card strong {
+  font-size: 28px;
+}
+
+.stat-card p {
+  color: #697386;
+  line-height: 1.6;
+}
+
+
+/* =========================
+   Dashboard Sections
+========================= */
+
+.dashboard-section {
+  margin-top: 28px;
+  padding: 26px;
+
+  background: white;
+  border: 1px solid #e7eaf0;
+  border-radius: 16px;
+
+  box-shadow:
+    0 4px 14px rgba(20, 30, 50, 0.04);
+}
+
+.dashboard-section h2 {
+  margin-top: 0;
+  margin-bottom: 20px;
+
+  font-size: 22px;
+}
+
+
+/* =========================
+   Buttons
+========================= */
+
+.dashboard button,
+.auth-card button {
+  padding: 11px 18px;
+
+  border-radius: 9px;
+
+  background: #4f46e5;
+  color: white;
+
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+
+.dashboard button:hover,
+.auth-card button:hover {
+  background: #4338ca;
+  transform: translateY(-1px);
+}
+
+.dashboard button:disabled,
+.auth-card button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+
+/* =========================
+   Progress
+========================= */
+
+.progress-bar {
+  width: 100%;
+  height: 10px;
+
+  margin: 12px 0;
+
+  overflow: hidden;
+
+  background: #e9ecf2;
+  border-radius: 999px;
+}
+
+.progress-fill {
+  height: 100%;
+
+  background: #4f46e5;
+
+  border-radius: 999px;
+
+  transition: width 0.4s ease;
+}
+
+
+/* =========================
+   Skills
+========================= */
+
+.skill-row {
+  margin-bottom: 22px;
+}
+
+.skill-row:last-child {
+  margin-bottom: 0;
+}
+
+.skill-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  margin-bottom: 8px;
+
+  font-size: 14px;
+}
+
+.skill-header strong {
+  font-size: 14px;
+}
+
+
+/* =========================
+   Quiz Attempts
+========================= */
+
+.attempt-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  padding: 16px 0;
+
+  border-bottom: 1px solid #edf0f4;
+}
+
+.attempt-row:last-child {
+  border-bottom: none;
+}
+
+.attempt-row strong {
+  font-size: 16px;
+}
+
+.attempt-row p {
+  margin: 5px 0 0;
+
+  color: #697386;
+  font-size: 14px;
+}
+
+
+/* =========================
+   Authentication
+========================= */
+
+.auth-page {
+  min-height: 100vh;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  padding: 24px;
+}
+
+.auth-card {
+  width: min(420px, 100%);
+
+  padding: 36px;
+
+  background: white;
+  border: 1px solid #e5e8ef;
+  border-radius: 18px;
+
+  box-shadow:
+    0 18px 50px rgba(20, 30, 50, 0.08);
+}
+
+.auth-card h1 {
+  margin: 0 0 8px;
+
+  font-size: 32px;
+  font-weight: 800;
+}
+
+.auth-card > p {
+  color: #697386;
+}
+
+.auth-card form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+
+  margin-top: 24px;
+}
+
+.auth-card input {
+  width: 100%;
+
+  padding: 13px 14px;
+
+  border: 1px solid #d8dde7;
+  border-radius: 9px;
+
+  outline: none;
+
+  background: white;
+
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.auth-card input:focus {
+  border-color: #4f46e5;
+
+  box-shadow:
+    0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.auth-card button {
+  margin-top: 4px;
+
+  width: 100%;
+}
+
+
+/* =========================
+   AI Tutor
+========================= */
+
+.dashboard textarea {
+  width: 100%;
+
+  padding: 15px;
+
+  border: 1px solid #d8dde7;
+  border-radius: 12px;
+
+  resize: vertical;
+
+  outline: none;
+
+  line-height: 1.6;
+}
+
+.dashboard textarea:focus {
+  border-color: #4f46e5;
+
+  box-shadow:
+    0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.dashboard small {
+  display: block;
+
+  margin-top: 12px;
+
+  color: #697386;
+}
+
+
+/* =========================
+   Responsive
+========================= */
+
+@media (max-width: 768px) {
+  .navbar {
+    padding: 14px 20px;
+  }
+
+  .navbar-links {
+    gap: 12px;
+  }
+
+  .navbar-links span {
+    display: none;
+  }
+
+  .dashboard {
+    width: min(100% - 24px, 1100px);
+    padding-top: 32px;
+  }
+
+  .dashboard h1 {
+    font-size: 30px;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .navbar {
+    align-items: flex-start;
+  }
+
+  .navbar-links {
+    gap: 8px;
+  }
+
+  .navbar-links a {
+    font-size: 12px;
+  }
+
+  .navbar-links button {
+    padding: 7px 10px;
+    font-size: 12px;
+  }
+
+  .auth-card {
+    padding: 26px 20px;
+  }
+}
+
+/* =========================
+   Learning Experience
+========================= */
+
+.learning-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 24px;
+  margin-top: 28px;
+}
+
+.lesson-sidebar {
+  align-self: start;
+  padding: 20px;
+
+  background: white;
+  border: 1px solid #e7eaf0;
+  border-radius: 16px;
+}
+
+.lesson-sidebar h2 {
+  margin-top: 0;
+  font-size: 18px;
+}
+
+.lesson-item {
+  width: 100%;
+
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  padding: 13px 12px;
+  margin-bottom: 6px;
+
+  text-align: left;
+
+  background: transparent;
+  color: #4b5563;
+
+  border-radius: 9px;
+
+  cursor: pointer;
+}
+
+.lesson-item:hover {
+  background: #f3f4f8;
+}
+
+.lesson-item-active {
+  background: #eef0ff;
+  color: #4f46e5;
+  font-weight: 700;
+}
+
+.lesson-item span:first-child {
+  min-width: 24px;
+  font-weight: 700;
+}
+
+.lesson-content {
+  min-height: 450px;
+  padding: 34px;
+
+  background: white;
+  border: 1px solid #e7eaf0;
+  border-radius: 16px;
+
+  box-shadow:
+    0 4px 14px rgba(20, 30, 50, 0.04);
+}
+
+.lesson-content-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  margin-bottom: 20px;
+
+  color: #697386;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.completed-badge {
+  padding: 6px 10px;
+
+  border-radius: 999px;
+
+  background: #eefbf3;
+  color: #18864b;
+
+  font-size: 12px;
+}
+
+.lesson-content h2 {
+  margin: 0 0 24px;
+
+  font-size: 30px;
+  letter-spacing: -0.5px;
+}
+
+.lesson-text {
+  min-height: 180px;
+
+  color: #4b5563;
+
+  font-size: 17px;
+  line-height: 1.8;
+
+  white-space: pre-wrap;
+}
+
+.lesson-actions {
+  display: flex;
+  gap: 12px;
+
+  margin-top: 32px;
+}
+
+.lesson-actions button:last-child {
+  background: #172033;
+}
+
+.lesson-actions button:last-child:hover {
+  background: #30394d;
+}
+
+.error-message {
+  margin-top: 16px;
+  color: #dc2626;
+}
+
+
+/* =========================
+   Learning Responsive
+========================= */
+
+@media (max-width: 800px) {
+  .learning-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .lesson-sidebar {
+    display: flex;
+    gap: 8px;
+
+    overflow-x: auto;
+  }
+
+  .lesson-sidebar h2 {
+    display: none;
+  }
+
+  .lesson-item {
+    min-width: 180px;
+    margin-bottom: 0;
+  }
+
+  .lesson-content {
+    padding: 24px;
+  }
+}
+/* =========================
+   Dashboard Improvements
+========================= */
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  margin-bottom: 30px;
+}
+
+.eyebrow {
+  margin: 0 0 7px;
+
+  color: #4f46e5;
+
+  font-size: 11px;
+  font-weight: 800;
+
+  letter-spacing: 1px;
+}
+
+.dashboard-header h1 {
+  margin-bottom: 10px;
+}
+
+.dashboard-header p:last-child {
+  color: #697386;
+}
+
+
+/* Recommendation */
+
+.recommendation-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  gap: 30px;
+
+  padding: 26px 30px;
+
+  margin-bottom: 28px;
+
+  background: #eef0ff;
+
+  border: 1px solid #dfe2ff;
+  border-radius: 16px;
+}
+
+.recommendation-card h2 {
+  margin: 0 0 8px;
+
+  font-size: 22px;
+}
+
+.recommendation-card p:last-child {
+  margin-bottom: 0;
+
+  color: #5f6680;
+}
+
+.recommendation-score {
+  min-width: 100px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.recommendation-score strong {
+  font-size: 32px;
+}
+
+.recommendation-score span {
+  color: #697386;
+  font-size: 12px;
+}
+
+
+/* Section Heading */
+
+.section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  margin-bottom: 22px;
+}
+
+.section-heading h2 {
+  margin: 0;
+}
+
+.section-heading > strong {
+  font-size: 24px;
+}
+
+
+/* Larger Progress */
+
+.progress-bar.large {
+  height: 13px;
+}
+
+
+/* Skill */
+
+.skill-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.skill-header > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.skill-header small {
+  color: #8a93a3;
+  font-size: 12px;
+}
+
+.skills-list {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+
+/* Empty state */
+
+.empty-state {
+  padding: 35px 20px;
+
+  text-align: center;
+
+  border: 1px dashed #d9dde6;
+  border-radius: 12px;
+}
+
+.empty-icon {
+  margin-bottom: 10px;
+
+  font-size: 30px;
+}
+
+.empty-state h3 {
+  margin: 0 0 6px;
+}
+
+.empty-state p {
+  margin: 0;
+
+  color: #697386;
+}
+
+
+/* Quiz attempts */
+
+.attempt-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.attempt-score {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+}
+
+.attempt-score strong {
+  font-size: 20px;
+}
+
+.attempt-score span {
+  color: #8a93a3;
+  font-size: 11px;
+}
+
+
+/* Responsive */
+
+@media (max-width: 650px) {
+  .recommendation-card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .recommendation-score {
+    align-items: flex-start;
+  }
+
+  .section-heading {
+    align-items: flex-start;
+  }
+}
+
+.ai-tutor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.ai-tutor-header h1 {
+  margin: 4px 0 8px;
+}
+
+.secondary-button {
+  background: white;
+  color: #374151;
+  border: 1px solid #dfe3ea;
+}
+
+.secondary-button:hover {
+  background: #f7f8fa;
+}
+
+.ai-chat-card {
+  background: white;
+  border: 1px solid #e7eaf0;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 4px 14px rgba(20, 30, 50, 0.04);
+}
+
+.chat-messages {
+  min-height: 480px;
+  max-height: 600px;
+  overflow-y: auto;
+  padding: 28px;
+}
+
+.chat-empty-state {
+  min-height: 420px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  color: #697386;
+}
+
+.chat-empty-state h2 {
+  margin: 12px 0 8px;
+  color: #172033;
+}
+
+.chat-empty-state p {
+  margin-bottom: 24px;
+}
+
+.suggestion-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.suggestion-list button {
+  background: #f5f6fa;
+  color: #374151;
+  border: 1px solid #e4e7ed;
+  font-size: 14px;
+}
+
+.suggestion-list button:hover {
+  background: #eef0ff;
+  color: #4f46e5;
+}
+
+.chat-message {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  max-width: 80%;
+}
+
+.chat-message-user {
+  margin-left: auto;
+  flex-direction: row-reverse;
+}
+
+.chat-avatar {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #f3f4f8;
+  border-radius: 50%;
+  font-size: 17px;
+}
+
+.chat-bubble {
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: #f5f6fa;
+  color: #374151;
+  line-height: 1.65;
+}
+
+.chat-bubble p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.chat-bubble small {
+  display: block;
+  margin-top: 10px;
+  color: #7a8394;
+  font-size: 12px;
+}
+
+.chat-message-user .chat-bubble {
+  background: #4f46e5;
+  color: white;
+  border-top-right-radius: 4px;
+}
+
+.chat-message-assistant .chat-bubble {
+  border-top-left-radius: 4px;
+}
+
+.chat-message-user .chat-avatar {
+  background: #eef0ff;
+}
+
+.typing-bubble {
+  color: #697386;
+}
+
+.typing-dots {
+  display: inline-block;
+  margin-left: 4px;
+  animation: typing 1s infinite;
+}
+
+@keyframes typing {
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+.chat-input-area {
+  border-top: 1px solid #e7eaf0;
+  padding: 18px;
+  background: #fafbfc;
+}
+
+.chat-input-area textarea {
+  width: 100%;
+  min-height: 60px;
+  padding: 14px;
+  border: 1px solid #dfe3ea;
+  border-radius: 12px;
+  background: white;
+  color: #172033;
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1.5;
+  resize: vertical;
+  outline: none;
+}
+
+.chat-input-area textarea:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.chat-input-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.chat-input-footer span {
+  color: #8991a1;
+  font-size: 12px;
+}
+
+.ai-error {
+  margin: 0 18px 18px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #fff1f2;
+  color: #be123c;
+  font-size: 14px;
+}
+
+@media (max-width: 700px) {
+  .ai-tutor-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .chat-messages {
+    min-height: 400px;
+    padding: 18px;
+  }
+
+  .chat-message {
+    max-width: 92%;
+  }
+
+  .suggestion-list {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .suggestion-list button {
+    width: 100%;
+  }
+
+  .chat-input-footer {
+    align-items: flex-end;
+  }
+}
+
+.quiz-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.quiz-header h1 {
+  margin: 4px 0 8px;
+}
+
+.quiz-progress-summary {
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: #eef0ff;
+  color: #4f46e5;
+  font-weight: 700;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.quiz-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.quiz-question-card {
+  background: white;
+  border: 1px solid #e7eaf0;
+  border-radius: 16px;
+  padding: 26px;
+}
+
+.quiz-question-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  color: #697386;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.quiz-question-header small {
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #f3f4f8;
+  color: #697386;
+}
+
+.quiz-question-card h2 {
+  margin: 0 0 20px;
+  font-size: 20px;
+  line-height: 1.5;
+}
+
+.quiz-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.quiz-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid #dfe3ea;
+  border-radius: 11px;
+  cursor: pointer;
+  transition: 0.15s ease;
+}
+
+.quiz-option:hover {
+  background: #f8f9fb;
+}
+
+.quiz-option input {
+  accent-color: #4f46e5;
+}
+
+.quiz-option-selected {
+  border-color: #6366f1;
+  background: #eef0ff;
+  color: #3730a3;
+  font-weight: 600;
+}
+
+.quiz-submit-area {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 24px;
+  padding-bottom: 30px;
+}
+
+.quiz-result-card {
+  max-width: 650px;
+  margin: 50px auto;
+  padding: 48px;
+  background: white;
+  border: 1px solid #e7eaf0;
+  border-radius: 20px;
+  text-align: center;
+  box-shadow: 0 8px 30px rgba(20, 30, 50, 0.06);
+}
+
+.quiz-result-card h1 {
+  margin: 8px 0;
+}
+
+.quiz-result-score {
+  margin: 24px 0;
+  font-size: 64px;
+  font-weight: 800;
+  color: #4f46e5;
+}
+
+.quiz-result-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+@media (max-width: 700px) {
+  .quiz-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .quiz-question-card {
+    padding: 20px;
+  }
+
+  .quiz-result-card {
+    padding: 30px 20px;
+    margin: 25px auto;
+  }
+
+  .quiz-result-actions {
+    flex-direction: column;
+  }
+
+  .quiz-result-actions button {
+    width: 100%;
+  }
+}
+
+.course-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 20px;
+  margin-bottom: 18px;
+}
+
+.course-page-header h1 {
+  margin: 4px 0 8px;
+}
+
+.course-progress-summary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 90px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: #eef0ff;
+  color: #4f46e5;
+}
+
+.course-progress-summary strong {
+  font-size: 24px;
+}
+
+.course-progress-summary span {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+@media (max-width: 700px) {
+  .course-page-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+.document-chat-page {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 32px 20px;
+}
+
+.document-chat-header {
+  margin-bottom: 24px;
+}
+
+.document-chat-header h1 {
+  margin-bottom: 8px;
+}
+
+.document-upload-card,
+.document-chat-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.document-upload-card input {
+  display: block;
+  margin: 16px 0;
+}
+
+.document-upload-card button,
+.chat-input-area button {
+  border: none;
+  border-radius: 8px;
+  padding: 10px 18px;
+  cursor: pointer;
+}
+
+.document-upload-card button:disabled,
+.chat-input-area button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.upload-success {
+  margin-top: 12px;
+}
+
+.document-chat-card {
+  min-height: 500px;
+}
+
+.document-chat-card .chat-messages {
+  min-height: 350px;
+  max-height: 500px;
+  overflow-y: auto;
+  margin-bottom: 20px;
+}
+
+.document-chat-card .chat-message {
+  display: flex;
+  margin-bottom: 12px;
+}
+
+.document-chat-card .chat-message.user {
+  justify-content: flex-end;
+}
+
+.document-chat-card .chat-message.assistant {
+  justify-content: flex-start;
+}
+
+.document-chat-card .chat-bubble {
+  max-width: 75%;
+  padding: 12px 16px;
+  border-radius: 12px;
+}
+
+.document-chat-card .user .chat-bubble {
+  background: #2563eb;
+  color: white;
+}
+
+.document-chat-card .assistant .chat-bubble {
+  background: #f3f4f6;
+}
+
+.chat-input-area {
+  display: flex;
+  gap: 12px;
+}
+
+.chat-input-area textarea {
+  flex: 1;
+  resize: vertical;
+  padding: 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+}
