@@ -1,0 +1,23 @@
+services:
+
+  backend:
+    build:
+      context: ./backend
+    container_name: learnflow-backend
+    ports:
+      - "5000:5000"
+    env_file:
+      - ./backend/.env
+    environment:
+      AI_SERVICE_URL: http://rag:8000
+    depends_on:
+      - rag
+
+  rag:
+    build:
+      context: ./RAG_Project
+    container_name: learnflow-rag
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./RAG_Project/.env
