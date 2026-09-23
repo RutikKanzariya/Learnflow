@@ -26,10 +26,12 @@ function DocumentChat() {
     setError("");
 
     try {
-      await api.post("/ai/upload", file, {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      await api.post("/ai/upload", formData, {
         headers: {
-          "Content-Type": "application/pdf",
-          "X-File-Name": encodeURIComponent(file.name),
+          "Content-Type": "multipart/form-data",
         },
       });
 

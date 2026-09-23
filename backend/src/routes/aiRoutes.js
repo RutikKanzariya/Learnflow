@@ -55,6 +55,7 @@
 // export default router;
 
 import express from "express";
+import multer from "multer";
 
 import protect from "../middleware/authMiddleware.js";
 
@@ -103,14 +104,28 @@ router.post(
   createAIQuiz
 );
 
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024,
+    files: 1,
+  },
+});
+
 router.post(
   "/upload",
   protect,
   aiLimiter,
-  express.raw({
-    type: "application/pdf",
-    limit: "10mb",
-  }),
+  (req, res, next) => {
+    if (req.is("multipart/form-data")) {
+      upload.single("file")(req, res, next);
+    } else {
+      express.raw({
+        type: "application/pdf",
+        limit: "10mb",
+      })(req, res, next);
+    }
+  },
   uploadDocument
 );
 

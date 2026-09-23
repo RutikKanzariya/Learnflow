@@ -38,20 +38,31 @@ const askTutor = async (question) => {
 
 export const uploadDocument = async (req, res) => {
   try {
-    if (!req.body || !Buffer.isBuffer(req.body) || req.body.length === 0) {
+    let fileBuffer;
+    let fileName;
+
+    if (req.file && req.file.buffer && req.file.buffer.length) {
+      fileBuffer = req.file.buffer;
+      fileName = req.file.originalname || "upload.pdf";
+    } else if (
+      req.body &&
+      Buffer.isBuffer(req.body) &&
+      req.body.length > 0
+    ) {
+      fileBuffer = req.body;
+      fileName = decodeURIComponent(
+        req.headers["x-file-name"] || "upload.pdf"
+      );
+    } else {
       return res.status(400).json({
         message: "PDF file is required",
       });
     }
 
-    const fileName = decodeURIComponent(
-      req.headers["x-file-name"] || "upload.pdf"
-    );
-
     const formData = new FormData();
     formData.append(
       "file",
-      new Blob([req.body], { type: "application/pdf" }),
+      new Blob([fileBuffer], { type: "application/pdf" }),
       fileName
     );
 
