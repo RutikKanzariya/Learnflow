@@ -1,12 +1,17 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 
 function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const successMessage = (
+    location.state as { message?: string } | null
+  )?.message;
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -49,6 +54,12 @@ function Login() {
         <h1>LearnFlow</h1>
 
         <p>Welcome back</p>
+
+        {successMessage && (
+          <p className="auth-success">
+            {successMessage}
+          </p>
+        )}
 
         <form onSubmit={handleLogin}>
           <input

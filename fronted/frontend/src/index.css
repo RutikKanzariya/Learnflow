@@ -427,6 +427,30 @@ a {
   width: 100%;
 }
 
+.auth-success {
+  margin-top: 20px;
+
+  padding: 12px 14px;
+
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-radius: 9px;
+
+  color: #047857;
+}
+
+.auth-error {
+  margin-top: 20px;
+
+  padding: 12px 14px;
+
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 9px;
+
+  color: #b91c1c;
+}
+
 
 /* =========================
    AI Tutor

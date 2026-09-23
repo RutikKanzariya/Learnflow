@@ -1,22 +1,26 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import api from "../services/api";
-import { useAuth } from "../context/AuthContext";
 function Register() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState<
+    "success" | "error" | null
+  >(null);
   const [loading, setLoading] = useState(false);
 
-  const { login } = useAuth();
+  const navigate = useNavigate();
   const handleRegister = async (event: FormEvent) => {
     event.preventDefault();
 
     try {
       setLoading(true);
       setMessage("");
+      setMessageType(null);
 
       const response = await api.post("/auth/register", {
         name,
@@ -24,13 +28,26 @@ function Register() {
         password,
       });
 
-      const { token, user } = response.data;
+      const { user } = response.data;
 
-      login(token,user);
-      setMessage(`Account created. Welcome, ${user.name}!`);
-    } catch (error: any) {
       setMessage(
-        error.response?.data?.message || "Registration failed"
+        `Account created. Welcome, ${user.name}!`
+      );
+
+      setMessageType("success");
+
+      setTimeout(() => {
+        navigate("/login", {
+          state: {
+            message: `Account created. Welcome, ${user.name}! Please log in.`,
+          },
+        });
+      }, 1500);
+    } catch (error: any) {
+      setMessageType("error");
+      setMessage(
+        error.response?.data?.message ||
+          "Registration failed"
       );
     } finally {
       setLoading(false);
@@ -76,7 +93,22 @@ function Register() {
           </button>
         </form>
 
-        {message && <p>{message}</p>}
+        {message && (
+          <p
+            className={
+              messageType === "error"
+                ? "auth-error"
+                : "auth-success"
+            }
+          >
+            {message}
+          </p>
+        )}
+
+        <p>
+          Already have an account?{" "}
+          <Link to="/login">Login</Link>
+        </p>
       </div>
     </div>
   );
