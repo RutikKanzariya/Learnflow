@@ -1,5 +1,5 @@
 import { useState } from "react";
-import axios from "axios";
+import api from "../services/api";
 
 type Message = {
   role: "user" | "assistant";
@@ -26,13 +26,12 @@ function DocumentChat() {
     setError("");
 
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      await axios.post(
-        "http://localhost:8000/upload",
-        formData
-      );
+      await api.post("/ai/upload", file, {
+        headers: {
+          "Content-Type": "application/pdf",
+          "X-File-Name": encodeURIComponent(file.name),
+        },
+      });
 
       setUploaded(true);
     } catch (error) {
@@ -61,12 +60,9 @@ function DocumentChat() {
     setError("");
 
     try {
-      const response = await axios.post(
-        "http://localhost:8000/ask",
-        {
-          question: userQuestion,
-        }
-      );
+      const response = await api.post("/ai/tutor", {
+        question: userQuestion,
+      });
 
       setMessages((previous) => [
         ...previous,

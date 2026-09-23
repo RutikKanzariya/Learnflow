@@ -74,6 +74,7 @@ import {
   createRoadmap,
   tutorQuestion,
   createAIQuiz,
+  uploadDocument,
 } from "../controllers/aiController.js";
 
 const router = express.Router();
@@ -100,6 +101,17 @@ router.post(
   aiLimiter,
   validate(aiQuizSchema),
   createAIQuiz
+);
+
+router.post(
+  "/upload",
+  protect,
+  aiLimiter,
+  express.raw({
+    type: "application/pdf",
+    limit: "10mb",
+  }),
+  uploadDocument
 );
 
 export default router;

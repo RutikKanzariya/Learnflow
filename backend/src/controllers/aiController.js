@@ -3,8 +3,11 @@ import Lesson from "../models/Lesson.js";
 import Quiz from "../models/Quiz.js";
 
 
+const AI_SERVICE_URL =
+  process.env.AI_SERVICE_URL || "http://localhost:8000";
+
 const askTutor = async (question) => {
-  const response = await fetch("http://localhost:8000/ask", {
+  const response = await fetch(`${AI_SERVICE_URL}/ask`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -30,6 +33,50 @@ const askTutor = async (question) => {
     answer,
     sources: data.sources,
   };
+};
+
+export const uploadDocument = async (req, res) => {
+  try {
+    if (!req.body || !Buffer.isBuffer(req.body) || req.body.length === 0) {
+      return res.status(400).json({
+        message: "PDF file is required",
+      });
+    }
+
+    const fileName = decodeURIComponent(
+      req.headers["x-file-name"] || "upload.pdf"
+    );
+
+    const formData = new FormData();
+    formData.append(
+      "file",
+      new Blob([req.body], { type: "application/pdf" }),
+      fileName
+    );
+
+    const response = await fetch(`${AI_SERVICE_URL}/upload`, {
+      method: "POST",
+      body: formData,
+    });
+
+    const responseText = await response.text();
+
+    let data;
+
+    try {
+      data = JSON.parse(responseText);
+    } catch (error) {
+      data = { message: responseText };
+    }
+
+    res.status(response.status).json(data);
+  } catch (error) {
+    console.error("PDF upload error:", error.message);
+
+    res.status(500).json({
+      message: "Failed to upload PDF",
+    });
+  }
 };
 
 export const createRoadmap = async (req, res) => {
