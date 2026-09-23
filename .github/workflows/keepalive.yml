@@ -1,0 +1,19 @@
+name: Keep Render Services Awake
+
+on:
+  schedule:
+    # Every 10 minutes (Render free tier sleeps after ~15 min idle)
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    name: Ping backend + RAG health endpoints
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping backend
+        run: |
+          curl -fsS https://learnflow-backend.onrender.com/ -o /dev/null || true
+      - name: Ping RAG
+        run: |
+          curl -fsS https://learnflow-rag.onrender.com/health -o /dev/null || true
