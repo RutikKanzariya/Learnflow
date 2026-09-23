@@ -4,6 +4,7 @@
 fastapi
 uvicorn
 python-dotenv
+python-multipart
 langchain-core
 langchain-text-splitters
 langchain-google-genai
