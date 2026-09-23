@@ -26,11 +26,11 @@ services:
       - key: JWT_SECRET
         sync: false # long random string used to sign JWTs
       - key: FRONTEND_URL
-        value: https://your-frontend.vercel.app # replace with your Vercel URL
+        value: https://learnflow.vercel.app,https://learnflow-git-main-rutik-kanzariya.vercel.app,http://localhost:5173
       - key: AI_SERVICE_URL
         value: https://learnflow-rag.onrender.com # RAG service internal/external URL
       - key: ALLOWED_ORIGINS
-        value: https://your-frontend.vercel.app
+        value: https://learnflow.vercel.app,https://learnflow-git-main-rutik-kanzariya.vercel.app,http://localhost:5173
 
   # ---------------- RAG Service (Python / FastAPI) ----------------
   - type: web

@@ -105,19 +105,33 @@ app.use(helmet());
 /*
   Allow requests from the frontend.
 
-  FRONTEND_URL may be a single origin or a comma-separated
-  list (e.g. for local + production).
+  FRONTEND_URL (and ALLOWED_ORIGINS) may each be a single origin
+  or a comma-separated list (e.g. for local + production).
+
+  Vercel creates a new hostname per branch/PR preview deploy, so any
+  subdomain of our vercel.app project (learnflow-*.vercel.app) is
+  also allowed.
 */
-const allowedOrigins = (
-  process.env.FRONTEND_URL || "http://localhost:5173"
-)
-  .split(",")
-  .map((origin) => origin.trim())
+const allowedOrigins = [
+  ...(process.env.FRONTEND_URL || "http://localhost:5173").split(","),
+  ...(process.env.ALLOWED_ORIGINS || "").split(","),
+]
+  .map((origin) => origin.trim().replace(/\/$/, ""))
   .filter(Boolean);
+
+const isAllowedOrigin = (origin) =>
+  allowedOrigins.includes(origin) ||
+  /^https:\/\/learnflow(-git-[a-z0-9-]+)?\.vercel\.app$/.test(origin);
 
 app.use(
   cors({
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+      if (!origin || isAllowedOrigin(origin)) {
+        callback(null, true);
+      } else {
+        callback(null, false);
+      }
+    },
   })
 );
 
