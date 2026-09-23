@@ -1,4 +1,5 @@
-import { FormEvent, KeyboardEvent, useState } from "react";
+import { useState } from "react";
+import type { FormEvent, KeyboardEvent } from "react";
 import api from "../services/api";
 
 type Message = {
@@ -11,6 +12,8 @@ function AITutor() {
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
+  const [listening, setListening] = useState(false);
+  const [speakingId, setSpeakingId] = useState<string | null>(null);
   const [error, setError] = useState("");
 
   const handleAsk = async (event: FormEvent) => {
@@ -69,6 +72,83 @@ function AITutor() {
   const clearChat = () => {
     setMessages([]);
     setError("");
+    window.speechSynthesis?.cancel();
+  };
+
+  const startVoiceInput = () => {
+    const SpeechRecognitionCtor =
+      (window as any).SpeechRecognition ||
+      (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognitionCtor) {
+      setError("Voice input is not supported in this browser.");
+      return;
+    }
+
+    try {
+      const recognition = new SpeechRecognitionCtor();
+
+      recognition.lang = "en-US";
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+
+      recognition.onstart = () => {
+        setListening(true);
+        setError("");
+      };
+
+      recognition.onresult = (event: any) => {
+        const transcript = event.results?.[0]?.[0]?.transcript || "";
+
+        if (transcript) {
+          setQuestion((prev) =>
+            prev.trim() ? `${prev.trim()} ${transcript}` : transcript
+          );
+        }
+      };
+
+      recognition.onerror = (event: any) => {
+        setError(
+          event?.error === "not-allowed"
+            ? "Microphone access was denied."
+            : "Voice recognition failed. Please try again."
+        );
+      };
+
+      recognition.onend = () => {
+        setListening(false);
+      };
+
+      recognition.start();
+    } catch (error) {
+      console.error("Voice input error:", error);
+      setError("Could not start voice input.");
+      setListening(false);
+    }
+  };
+
+  const speak = (text: string, messageId: string) => {
+    if (!("speechSynthesis" in window)) return;
+
+    window.speechSynthesis.cancel();
+
+    const utterance = new SpeechSynthesisUtterance(
+      text.replace(/<[^>]+>/g, "")
+    );
+
+    utterance.rate = 1;
+    utterance.pitch = 1;
+
+    utterance.onend = () => setSpeakingId(null);
+    utterance.onerror = () => setSpeakingId(null);
+
+    setSpeakingId(messageId);
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const stopSpeaking = () => {
+    window.speechSynthesis?.cancel();
+    setSpeakingId(null);
   };
 
   return (
@@ -161,6 +241,30 @@ function AITutor() {
                       {message.sources !== 1 ? "s" : ""}.
                     </small>
                   )}
+
+                {message.role === "assistant" && (
+                  <div className="chat-bubble-actions">
+                    {speakingId === message.content ? (
+                      <button
+                        type="button"
+                        className="tts-button"
+                        onClick={stopSpeaking}
+                      >
+                        ⏹ Stop
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="tts-button"
+                        onClick={() =>
+                          speak(message.content, message.content)
+                        }
+                      >
+                        🔊 Read aloud
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           ))}
@@ -198,12 +302,23 @@ function AITutor() {
               {question.length}/1000 · Enter to send
             </span>
 
-            <button
-              type="submit"
-              disabled={loading || !question.trim()}
-            >
-              {loading ? "Thinking..." : "Send →"}
-            </button>
+            <div className="chat-input-actions">
+              <button
+                type="button"
+                className={`mic-button ${listening ? "mic-button-active" : ""}`}
+                onClick={startVoiceInput}
+                title="Ask by voice"
+              >
+                {listening ? "🎙️ Listening..." : "🎙️"}
+              </button>
+
+              <button
+                type="submit"
+                disabled={loading || !question.trim()}
+              >
+                {loading ? "Thinking..." : "Send →"}
+              </button>
+            </div>
           </div>
         </form>
       </section>

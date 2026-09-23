@@ -123,26 +123,28 @@ export const createAIQuiz = async (req, res) => {
 
     const result = await generateQuiz(topic.trim());
 
-    let quizText = result.quiz;
+    let parsedQuiz = result.quiz;
 
-    // Remove Markdown JSON fences if Gemini added them.
-    quizText = quizText
-      .replace(/^```json\s*/i, "")
-      .replace(/^```\s*/i, "")
-      .replace(/\s*```$/i, "")
-      .trim();
+    // The RAG service returns a parsed JSON object,
+    // but handle a raw JSON string as a fallback.
+    if (typeof parsedQuiz === "string") {
+      let quizText = parsedQuiz
+        .replace(/^```json\s*/i, "")
+        .replace(/^```\s*/i, "")
+        .replace(/\s*```$/i, "")
+        .trim();
 
-    let parsedQuiz;
-
-    try {
-      parsedQuiz = JSON.parse(quizText);
-    } catch (error) {
-      return res.status(502).json({
-        message: "AI returned invalid quiz JSON",
-      });
+      try {
+        parsedQuiz = JSON.parse(quizText);
+      } catch (error) {
+        return res.status(502).json({
+          message: "AI returned invalid quiz JSON",
+        });
+      }
     }
 
     if (
+      !parsedQuiz ||
       !parsedQuiz.questions ||
       !Array.isArray(parsedQuiz.questions) ||
       parsedQuiz.questions.length === 0

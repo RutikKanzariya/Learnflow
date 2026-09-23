@@ -82,6 +82,12 @@ import quizRoutes from "./routes/quizRoutes.js";
 import aiRoutes from "./routes/aiRoutes.js";
 import recommendationRoutes from "./routes/recommendationRoutes.js";
 import analyticsRoutes from "./routes/analyticsRoutes.js";
+import gamificationRoutes from "./routes/gamificationRoutes.js";
+import spacedRepetitionRoutes from "./routes/spacedRepetitionRoutes.js";
+import flashcardRoutes from "./routes/flashcardRoutes.js";
+import studyRoomRoutes from "./routes/studyRoomRoutes.js";
+import noteRoutes from "./routes/noteRoutes.js";
+import bookmarkRoutes from "./routes/bookmarkRoutes.js";
 
 import {
   generalLimiter,
@@ -158,6 +164,36 @@ app.use(
 app.use(
   "/api/v1/analytics",
   analyticsRoutes
+);
+
+app.use(
+  "/api/v1/gamification",
+  gamificationRoutes
+);
+
+app.use(
+  "/api/v1/reviews",
+  spacedRepetitionRoutes
+);
+
+app.use(
+  "/api/v1/flashcards",
+  flashcardRoutes
+);
+
+app.use(
+  "/api/v1/study-rooms",
+  studyRoomRoutes
+);
+
+app.use(
+  "/api/v1/notes",
+  noteRoutes
+);
+
+app.use(
+  "/api/v1/bookmarks",
+  bookmarkRoutes
 );
 
 /*

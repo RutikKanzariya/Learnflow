@@ -26,6 +26,26 @@ const userSchema = new mongoose.Schema( // A schema describes the structure of o
       enum: ["student", "admin"],
       default: "student",
     },
+
+    xp: {
+      type: Number,
+      default: 0,
+    },
+
+    currentStreak: {
+      type: Number,
+      default: 0,
+    },
+
+    longestStreak: {
+      type: Number,
+      default: 0,
+    },
+
+    lastActiveDate: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,

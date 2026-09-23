@@ -16,29 +16,39 @@ function Navbar() {
         <Link to="/">LearnFlow</Link>
       </div>
 
-      <div className="navbar-links">
-        <Link to="/">Courses</Link>
+<div className="navbar-links">
+  <Link to="/">Courses</Link>
 
-        <Link to="/dashboard">
-          Dashboard
-        </Link>
+  <Link to="/dashboard">
+    Dashboard
+  </Link>
 
-        <Link to="/ai-tutor">
-          AI Tutor
-        </Link>
-        <Link to="/document-chat">My Documents</Link>
+  <Link to="/ai-tutor">
+    AI Tutor
+  </Link>
+  <Link to="/document-chat">My Documents</Link>
 
-        <span>
-          👋 {user?.name}
-        </span>
+  <Link to="/leaderboard">Leaderboard</Link>
 
-        <button
-          type="button"
-          onClick={handleLogout}
-        >
-          Logout
-        </button>
-      </div>
+  <Link to="/reviews">Reviews</Link>
+
+  <Link to="/flashcards">Flashcards</Link>
+
+  <Link to="/study-rooms">Study Rooms</Link>
+
+  <Link to="/notes">Notes</Link>
+
+  <span>
+    👋 {user?.name}
+  </span>
+
+  <button
+    type="button"
+    onClick={handleLogout}
+  >
+    Logout
+  </button>
+</div>
     </nav>
   );
 }

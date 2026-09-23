@@ -2,6 +2,7 @@ import Quiz from "../models/Quiz.js";
 import Lesson from "../models/Lesson.js";
 import QuizAttempt from "../models/QuizAttempt.js";
 import SkillProfile from "../models/SkillProfile.js";
+import { awardXP } from "../services/gamificationService.js";
 
 export const createQuiz = async (req, res) => {
   try {
@@ -205,6 +206,9 @@ export const submitQuiz = async (req, res) => {
       score,
       totalQuestions: quiz.questions.length,
     });
+
+    // Award XP (20 for attempting + 10 per correct answer)
+    await awardXP(req.user._id, 20 + score * 10);
 
     // Update topic-level mastery
     for (const [topic, stats] of Object.entries(topicStats)) {

@@ -598,7 +598,7 @@
 // export default CourseDetails;
 
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, Link } from "react-router-dom";
 import api from "../services/api";
 
 type Lesson = {
@@ -623,6 +623,12 @@ function CourseDetails() {
   const [loading, setLoading] = useState(true);
   const [completing, setCompleting] = useState(false);
   const [generatingQuiz, setGeneratingQuiz] = useState(false);
+  const [generatingFlashcards, setGeneratingFlashcards] = useState(false);
+  const [bookmarked, setBookmarked] = useState(false);
+  const [noteTitle, setNoteTitle] = useState("");
+  const [noteContent, setNoteContent] = useState("");
+  const [savingNote, setSavingNote] = useState(false);
+  const [savedMessage, setSavedMessage] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -676,6 +682,27 @@ setCompletedLessons(progressData);
     fetchCourseData();
   }, [courseId]);
 
+  useEffect(() => {
+    const checkBookmark = async () => {
+      if (!selectedLesson) return;
+
+      try {
+        const response = await api.get(
+          `/bookmarks/lesson/${selectedLesson._id}`
+        );
+
+        setBookmarked(response.data.bookmarked);
+      } catch (error: any) {
+        console.error(
+          "Bookmark check error:",
+          error
+        );
+      }
+    };
+
+    checkBookmark();
+  }, [selectedLesson]);
+
   const isCompleted = (lessonId: string) => {
     return completedLessons.includes(lessonId);
   };
@@ -716,6 +743,7 @@ setCompletedLessons(progressData);
     try {
       setGeneratingQuiz(true);
       setError("");
+      setSavedMessage("");
 
       const response = await api.post("/ai/quiz", {
         lessonId: selectedLesson._id,
@@ -738,6 +766,93 @@ setCompletedLessons(progressData);
       );
     } finally {
       setGeneratingQuiz(false);
+    }
+  };
+
+  const handleGenerateFlashcards = async () => {
+    if (!selectedLesson || generatingFlashcards) return;
+
+    try {
+      setGeneratingFlashcards(true);
+      setError("");
+      setSavedMessage("");
+
+      await api.post("/flashcards/generate/lesson", {
+        lessonId: selectedLesson._id,
+      });
+
+      setSavedMessage(
+        "Flashcards generated! Redirecting..."
+      );
+
+      navigate("/flashcards");
+    } catch (error: any) {
+      console.error(
+        "Generate flashcards error:",
+        error
+      );
+
+      setError(
+        error.response?.data?.message ||
+          "Failed to generate flashcards"
+      );
+    } finally {
+      setGeneratingFlashcards(false);
+    }
+  };
+
+  const handleToggleBookmark = async () => {
+    if (!selectedLesson) return;
+
+    try {
+      setError("");
+      setSavedMessage("");
+
+      const response = await api.post("/bookmarks", {
+        lessonId: selectedLesson._id,
+      });
+
+      setBookmarked(response.data.bookmarked);
+
+      setSavedMessage(
+        response.data.bookmarked
+          ? "Lesson bookmarked 🔖"
+          : "Bookmark removed"
+      );
+    } catch (error: any) {
+      setError(
+        error.response?.data?.message ||
+          "Failed to update bookmark"
+      );
+    }
+  };
+
+  const handleSaveNote = async () => {
+    if (!selectedLesson || !noteContent.trim() || savingNote) {
+      return;
+    }
+
+    try {
+      setSavingNote(true);
+      setError("");
+      setSavedMessage("");
+
+      await api.post("/notes", {
+        lessonId: selectedLesson._id,
+        title: noteTitle.trim(),
+        content: noteContent.trim(),
+      });
+
+      setNoteTitle("");
+      setNoteContent("");
+      setSavedMessage("Note saved 📝");
+    } catch (error: any) {
+      setError(
+        error.response?.data?.message ||
+          "Failed to save note"
+      );
+    } finally {
+      setSavingNote(false);
     }
   };
 
@@ -831,6 +946,12 @@ setCompletedLessons(progressData);
         </div>
       )}
 
+      {savedMessage && (
+        <div className="ai-success">
+          {savedMessage}
+        </div>
+      )}
+
       <div className="learning-layout">
         <aside className="lesson-sidebar">
           <h2>Lessons</h2>
@@ -874,6 +995,53 @@ setCompletedLessons(progressData);
             {selectedLesson.content}
           </div>
 
+          <div className="lesson-toolbar">
+            <button
+              type="button"
+              className={
+                bookmarked ? "bookmark-active" : "secondary-button"
+              }
+              onClick={handleToggleBookmark}
+            >
+              {bookmarked ? "🔖 Bookmarked" : "🔖 Bookmark"}
+            </button>
+
+            <Link
+              to="/notes"
+              className="secondary-button note-link"
+            >
+              📒 My Notes
+            </Link>
+          </div>
+
+          <div className="note-widget">
+            <h3>Quick note</h3>
+
+            <input
+              type="text"
+              value={noteTitle}
+              onChange={(e) => setNoteTitle(e.target.value)}
+              placeholder="Note title (optional)"
+              maxLength={150}
+            />
+
+            <textarea
+              value={noteContent}
+              onChange={(e) => setNoteContent(e.target.value)}
+              placeholder="Jot down a thought about this lesson..."
+              rows={3}
+              maxLength={2000}
+            />
+
+            <button
+              type="button"
+              onClick={handleSaveNote}
+              disabled={!noteContent.trim() || savingNote}
+            >
+              {savingNote ? "Saving..." : "Save Note"}
+            </button>
+          </div>
+
           <div className="lesson-actions">
             {!completed && (
               <button
@@ -895,6 +1063,16 @@ setCompletedLessons(progressData);
               {generatingQuiz
                 ? "Generating Quiz..."
                 : "🤖 Generate AI Quiz"}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleGenerateFlashcards}
+              disabled={generatingFlashcards}
+            >
+              {generatingFlashcards
+                ? "Generating Flashcards..."
+                : "🗂️ Generate Flashcards"}
             </button>
 
             {hasNextLesson && (

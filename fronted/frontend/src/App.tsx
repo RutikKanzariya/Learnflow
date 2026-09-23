@@ -15,6 +15,11 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Quiz from "./pages/Quiz";
 import DocumentChat from "./pages/DocumentChat";
+import Leaderboard from "./pages/Leaderboard";
+import SpacedRepetition from "./pages/SpacedRepetition";
+import Flashcards from "./pages/Flashcards";
+import StudyRooms from "./pages/StudyRooms";
+import Notes from "./pages/Notes";
 
 import Navbar from "./components/Navbar";
 import { useAuth } from "./context/AuthContext";
@@ -106,6 +111,51 @@ function App() {
           element={
             <ProtectedRoute>
               <Quiz />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/leaderboard"
+          element={
+            <ProtectedRoute>
+              <Leaderboard />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/reviews"
+          element={
+            <ProtectedRoute>
+              <SpacedRepetition />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/flashcards"
+          element={
+            <ProtectedRoute>
+              <Flashcards />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/study-rooms"
+          element={
+            <ProtectedRoute>
+              <StudyRooms />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/notes"
+          element={
+            <ProtectedRoute>
+              <Notes />
             </ProtectedRoute>
           }
         />

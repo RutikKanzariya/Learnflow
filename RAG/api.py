@@ -13,6 +13,9 @@ from langchain_google_genai import (
 
 from langchain_chroma import Chroma
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.documents import Document
+
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from pypdf import PdfReader
 
@@ -117,6 +120,11 @@ class QuizRequest(BaseModel):
     topic: str
 
 
+class FlashcardRequest(BaseModel):
+    topic: str
+    content: str = ""
+
+
 # -----------------------------
 # HEALTH CHECK
 # -----------------------------
@@ -190,11 +198,32 @@ async def upload_document(
             for page in pages
         )
 
+        # Split into chunks
+        splitter = RecursiveCharacterTextSplitter(
+            chunk_size=1000,
+            chunk_overlap=200,
+        )
+
+        chunks = splitter.split_text(full_text)
+
+        # Store chunks as LangChain documents
+        chunk_docs = [
+            Document(
+                page_content=chunk,
+                metadata={"source": file.filename},
+            )
+            for chunk in chunks
+        ]
+
+        # Index into the vector store
+        vector_store.add_documents(chunk_docs)
+
         return {
             "filename": file.filename,
             "pages": len(pages),
             "characters": len(full_text),
-            "message": "PDF uploaded successfully",
+            "chunks": len(chunk_docs),
+            "message": "PDF uploaded and indexed successfully",
         }
 
     except HTTPException:
@@ -233,13 +262,40 @@ def ask_question(
     try:
 
         # Retrieve relevant documents
-        docs = retriever.invoke(question)
+        try:
+            docs = retriever.invoke(question)
+        except Exception:
+            docs = []
 
         # Combine retrieved documents
         context = "\n\n".join(
             doc.page_content
             for doc in docs
         )
+
+        # If no document has been uploaded,
+        # answer using the LLM general knowledge.
+        if not context.strip():
+            fallback_prompt = f"""You are a helpful AI tutor.
+
+No document has been uploaded, so answer the
+question using your own general knowledge.
+
+Give a clear and well formatted answer.
+
+Question:
+{question}
+"""
+
+            response = llm.invoke(
+                fallback_prompt
+            )
+
+            return {
+                "question": question,
+                "answer": response.content,
+                "sources": len(docs),
+            }
 
         # Build prompt
         final_prompt = prompt.invoke(
@@ -297,9 +353,12 @@ def generate_quiz(
     try:
 
         # Retrieve relevant documents
-        docs = retriever.invoke(
-            f"Create a quiz about {topic}"
-        )
+        try:
+            docs = retriever.invoke(
+                f"Create a quiz about {topic}"
+            )
+        except Exception:
+            docs = []
 
         # Combine retrieved context
         context = "\n\n".join(
@@ -307,10 +366,25 @@ def generate_quiz(
             for doc in docs
         )
 
+        has_context = bool(context.strip())
+
+        # If a document was uploaded, base the quiz
+        # only on it. Otherwise use general knowledge.
+        if has_context:
+            source_instruction = (
+                "Use ONLY the provided context."
+            )
+        else:
+            source_instruction = (
+                "Use your own general knowledge "
+                "about the topic. No document has "
+                "been uploaded."
+            )
+
         quiz_prompt = f"""
 You are an AI quiz generator.
 
-Use ONLY the provided context.
+{source_instruction}
 
 Create exactly 5 multiple-choice questions about:
 {topic}
@@ -343,7 +417,10 @@ Every question must have exactly 4 options.
 
 The correctAnswer must exactly match
 one of the four options.
+"""
 
+        if has_context:
+            quiz_prompt += f"""
 Context:
 {context}
 """
@@ -487,4 +564,208 @@ Context:
         raise HTTPException(
             status_code=500,
             detail="Failed to generate quiz",
+        )
+
+
+# -----------------------------
+# AI FLASHCARDS
+# -----------------------------
+
+@app.post("/flashcards")
+def generate_flashcards(
+    request: FlashcardRequest
+):
+
+    topic = request.topic.strip()
+
+    if not topic:
+        raise HTTPException(
+            status_code=400,
+            detail="Topic is required",
+        )
+
+    try:
+
+        content = (request.content or "").strip()
+
+        docs = []
+        context = ""
+
+        # Only use retrieval when no content
+        # was supplied by the caller.
+        if not content:
+            try:
+                docs = retriever.invoke(
+                    f"Create flashcards about {topic}"
+                )
+            except Exception:
+                docs = []
+
+            context = "\n\n".join(
+                doc.page_content
+                for doc in docs
+            )
+
+        has_context = bool(context or content)
+
+        if has_context:
+            source_instruction = (
+                "Use ONLY the provided context."
+            )
+        else:
+            source_instruction = (
+                "Use your own general knowledge "
+                "about the topic. No document has "
+                "been uploaded."
+            )
+
+        flashcard_prompt = f"""
+You are an AI flashcard generator.
+
+{source_instruction}
+
+Create exactly 7 flashcards about:
+{topic}
+
+Return ONLY valid JSON.
+
+Do NOT use markdown.
+Do NOT use ```json.
+Do NOT add explanations before or after the JSON.
+
+Use exactly this structure:
+
+{{
+  "cards": [
+    {{
+      "front": "Question or prompt",
+      "back": "Answer or explanation"
+    }}
+  ]
+}}
+
+Each front should be a short question or keyword.
+Each back should be a clear, concise answer.
+Aim for varied and important facts.
+"""
+
+        if has_context:
+            if context:
+                flashcard_prompt += f"""
+Context:
+{context}
+"""
+            else:
+                flashcard_prompt += f"""
+Lesson content:
+{content}
+"""
+
+        # Ask Gemini
+        response = llm.invoke(
+            flashcard_prompt
+        )
+
+        raw_content = response.content
+
+        print("Gemini flashcards response:")
+        print(raw_content)
+
+        # Convert response to string
+        if isinstance(raw_content, list):
+            raw_content = "".join(
+                str(item)
+                for item in raw_content
+            )
+
+        raw_content = str(raw_content).strip()
+
+        # Remove markdown JSON fences if Gemini adds them
+        raw_content = re.sub(
+            r"^```json\s*",
+            "",
+            raw_content,
+            flags=re.IGNORECASE,
+        )
+
+        raw_content = re.sub(
+            r"^```\s*",
+            "",
+            raw_content,
+        )
+
+        raw_content = re.sub(
+            r"\s*```$",
+            "",
+            raw_content,
+        )
+
+        raw_content = raw_content.strip()
+
+        # Parse JSON
+        try:
+
+            flashcard_data = json.loads(
+                raw_content
+            )
+
+        except json.JSONDecodeError as json_error:
+
+            print(
+                "Invalid Gemini flashcard JSON:",
+                json_error
+            )
+
+            print(
+                "Raw response:",
+                raw_content
+            )
+
+            raise HTTPException(
+                status_code=500,
+                detail="AI returned invalid flashcard JSON",
+            )
+
+        # Validate structure
+        if "cards" not in flashcard_data:
+            raise HTTPException(
+                status_code=500,
+                detail="AI flashcard response does not contain cards",
+            )
+
+        cards = flashcard_data["cards"]
+
+        if not isinstance(cards, list):
+            raise HTTPException(
+                status_code=500,
+                detail="AI flashcard cards must be an array",
+            )
+
+        for card in cards:
+
+            if "front" not in card or "back" not in card:
+                raise HTTPException(
+                    status_code=500,
+                    detail="Each flashcard must have a front and back",
+                )
+
+        return {
+            "topic": topic,
+            "cards": cards,
+            "sources": len(docs),
+        }
+
+    except HTTPException:
+        raise
+
+    except Exception as error:
+
+        print(
+            "Flashcard generation error:",
+            str(error)
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to generate flashcards",
         )

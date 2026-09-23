@@ -132,7 +132,57 @@ const generateQuiz = async (topic) => {
     sources: data.sources,
   };
 };
-export { generateQuiz };
+
+const generateFlashcards = async (topic, content) => {
+  const response = await fetch("http://localhost:8000/flashcards", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      topic: topic.trim(),
+      content: content || "",
+    }),
+  });
+
+  const responseText = await response.text();
+
+  if (!response.ok) {
+    console.error("RAG flashcards response:", responseText);
+    throw new Error(`RAG flashcards service failed: ${responseText}`);
+  }
+
+  let data;
+
+  try {
+    data = JSON.parse(responseText);
+  } catch (error) {
+    throw new Error("RAG returned invalid JSON");
+  }
+
+  let cards = data.cards;
+
+  if (Array.isArray(cards)) {
+    cards = cards
+      .map((item) => {
+        if (typeof item === "string") {
+          return { front: item, back: "" };
+        }
+
+        return item;
+      })
+      .filter(
+        (item) => item && item.front && item.back
+      );
+  }
+
+  return {
+    topic,
+    cards,
+    sources: data.sources,
+  };
+};
+export { generateQuiz, generateFlashcards };
 
 export default generateRoadmap;
 

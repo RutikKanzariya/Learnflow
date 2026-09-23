@@ -175,6 +175,7 @@
 import Lesson from "../models/Lesson.js";
 import Course from "../models/Course.js";
 import LessonProgress from "../models/LessonProgress.js";
+import { awardXP } from "../services/gamificationService.js";
 
 // Create a lesson
 export const createLesson = async (req, res) => {
@@ -290,6 +291,9 @@ export const completeLesson = async (req, res) => {
         upsert: true,
       }
     );
+
+    // Award XP for completing a lesson
+    await awardXP(req.user._id, 15);
 
     res.status(200).json({
       message: "Lesson completed successfully",
