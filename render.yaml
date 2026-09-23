@@ -38,7 +38,7 @@ services:
     runtime: python
     rootDir: RAG
     plan: free
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install -r render-requirements.txt
     startCommand: uvicorn api:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     # NOTE: Free-tier Render does not support disks. Uploaded vector data is
@@ -56,3 +56,7 @@ services:
         value: chroma-db # local dir on free tier; use disk mount path on paid plans
       - key: ALLOWED_ORIGINS
         value: https://your-frontend.vercel.app
+      - key: OMP_NUM_THREADS
+        value: "1" # keep memory low on the free tier
+      - key: TOKENIZERS_PARALLELISM
+        value: "false"

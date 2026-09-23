@@ -1,0 +1,11 @@
+# Minimal runtime dependencies for the RAG web service (free-tier / Render).
+# api.py imports ONLY these packages. The full local/Docker dev set lives in
+# requirements.txt (which adds sentence-transformers, torch, pymupdf, etc.).
+fastapi
+uvicorn
+python-dotenv
+langchain-core
+langchain-text-splitters
+langchain-google-genai
+langchain-chroma
+pypdf
