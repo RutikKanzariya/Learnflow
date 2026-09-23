@@ -1,5 +1,6 @@
-const AI_SERVICE_URL =
-  process.env.AI_SERVICE_URL || "http://localhost:8000";
+const AI_SERVICE_URL = (
+  process.env.AI_SERVICE_URL || "http://localhost:8000"
+).replace(/\/+$/, "");
 
 const generateRoadmap = async (goal) => {
   const response = await fetch(`${AI_SERVICE_URL}/ask`, {

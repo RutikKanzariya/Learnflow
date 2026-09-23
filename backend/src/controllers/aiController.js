@@ -3,8 +3,9 @@ import Lesson from "../models/Lesson.js";
 import Quiz from "../models/Quiz.js";
 
 
-const AI_SERVICE_URL =
-  process.env.AI_SERVICE_URL || "http://localhost:8000";
+const AI_SERVICE_URL = (
+  process.env.AI_SERVICE_URL || "http://localhost:8000"
+).replace(/\/+$/, "");
 
 const askTutor = async (question) => {
   const response = await fetch(`${AI_SERVICE_URL}/ask`, {
