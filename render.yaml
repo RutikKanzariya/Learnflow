@@ -1,0 +1,54 @@
+# Render Blueprint for LearnFlow (backend + RAG service).
+#
+# How to use:
+#   1. Push this file to GitHub.
+#   2. In the Render dashboard: New -> Blueprint, select the LearnFlow repo.
+#   3. Fill in the env vars marked `sync: false` (MONGO_URI, JWT_SECRET,
+#      GEMINI_API_KEY, FRONTEND_URL, AI_SERVICE_URL, ALLOWED_ORIGINS).
+#   4. Every push to `main` auto-deploys, and the GitHub `CD` workflow can
+#      trigger deploys via the Render deploy hooks.
+#
+# Frontend is deployed separately to Vercel (see .github/workflows/deploy.yml).
+
+services:
+  # ---------------- Backend (Node.js / Express) ----------------
+  - type: web
+    name: learnflow-backend
+    runtime: node
+    rootDir: backend
+    plan: free
+    buildCommand: npm ci
+    startCommand: node src/app.js
+    healthCheckPath: /
+    envVars:
+      - key: MONGO_URI
+        sync: false # MongoDB Atlas connection string
+      - key: JWT_SECRET
+        sync: false # long random string used to sign JWTs
+      - key: FRONTEND_URL
+        value: https://your-frontend.vercel.app # replace with your Vercel URL
+      - key: AI_SERVICE_URL
+        value: https://learnflow-rag.onrender.com # RAG service internal/external URL
+      - key: ALLOWED_ORIGINS
+        value: https://your-frontend.vercel.app
+
+  # ---------------- RAG Service (Python / FastAPI) ----------------
+  - type: web
+    name: learnflow-rag
+    runtime: python
+    rootDir: RAG
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn api:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    disk:
+      name: chroma-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false # Google Gemini API key
+      - key: CHROMA_DB_DIR
+        value: /var/data/chroma # persist ChromaDB on the disk
+      - key: ALLOWED_ORIGINS
+        value: https://your-frontend.vercel.app

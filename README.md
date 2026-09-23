@@ -82,6 +82,55 @@ The project combines a **MERN-style application architecture** with a separate *
 
 ---
 
+## Deployment & CI/CD
+
+The project ships with a GitHub Actions CI/CD setup plus platform deploy
+configs for **Render** (backend + RAG) and **Vercel** (frontend). No Docker
+is required.
+
+### Environment variables
+
+| Service | Variable | Example |
+| ------- | -------- | ------- |
+| Backend | `MONGO_URI` | `mongodb+srv://user:pass@cluster.mongodb.net/learnflow` |
+| Backend | `JWT_SECRET` | long random string |
+| Backend | `FRONTEND_URL` | `https://learnflow.vercel.app` (comma-separated allowed) |
+| Backend | `AI_SERVICE_URL` | `https://learnflow-rag.onrender.com` |
+| RAG | `GEMINI_API_KEY` | your Gemini API key |
+| RAG | `ALLOWED_ORIGINS` | `https://learnflow.vercel.app` |
+| RAG | `CHROMA_DB_DIR` | `/var/data/chroma` (persistent disk mount) |
+| Frontend | `VITE_API_URL` | `https://learnflow-backend.onrender.com/api/v1` |
+
+See `backend/.env.example`, `RAG/.env.example`, and
+`fronted/frontend/.env.example` for full lists.
+
+### CI — every push / pull request
+
+`.github/workflows/ci.yml` runs three jobs:
+
+- **Backend** — `npm ci` + `node --check` on all source files
+- **Frontend** — `npm ci`, `npm run lint` (oxlint), `npm run build` (tsc + vite)
+- **RAG** — install `requirements.txt` + `py_compile` all Python modules
+
+### CD — push to `main`
+
+`.github/workflows/deploy.yml` auto-triggers once the matching secrets are set
+(deploy hooks/3 jobs are skipped until then):
+
+1. **Vercel** — builds and deploys the frontend (`fronted/frontend`) using the
+   Vercel CLI. Requires GitHub secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID`,
+   `VERCEL_PROJECT_ID`.
+2. **Render backend** — fires the Render deploy hook
+   (`RENDER_DEPLOY_HOOK_BACKEND`).
+3. **Render RAG** — fires the Render deploy hook (`RENDER_DEPLOY_HOOK_RAG`).
+
+Alternatively, connect the repo directly in the Vercel and Render dashboards
+(Root Directory: `fronted/frontend` for Vercel; Render uses the
+[`render.yaml`](render.yaml) blueprint) and let their native GitHub
+integrations auto-deploy — no deploy hooks needed.
+
+---
+
 ## Tech Stack
 
 ### Frontend

@@ -1,5 +1,8 @@
+const AI_SERVICE_URL =
+  process.env.AI_SERVICE_URL || "http://localhost:8000";
+
 const generateRoadmap = async (goal) => {
-  const response = await fetch("http://localhost:8000/ask", {
+  const response = await fetch(`${AI_SERVICE_URL}/ask`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -95,7 +98,7 @@ const generateRoadmap = async (goal) => {
 // };
 
 const generateQuiz = async (topic) => {
-  const response = await fetch("http://localhost:8000/quiz", {
+  const response = await fetch(`${AI_SERVICE_URL}/quiz`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -134,7 +137,7 @@ const generateQuiz = async (topic) => {
 };
 
 const generateFlashcards = async (topic, content) => {
-  const response = await fetch("http://localhost:8000/flashcards", {
+  const response = await fetch(`${AI_SERVICE_URL}/flashcards`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

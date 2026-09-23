@@ -103,11 +103,21 @@ const app = express();
 app.use(helmet());
 
 /*
-  Allow requests from React frontend
+  Allow requests from the frontend.
+
+  FRONTEND_URL may be a single origin or a comma-separated
+  list (e.g. for local + production).
 */
+const allowedOrigins = (
+  process.env.FRONTEND_URL || "http://localhost:5173"
+)
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: allowedOrigins,
   })
 );
 

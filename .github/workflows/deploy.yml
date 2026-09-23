@@ -1,0 +1,59 @@
+name: CD
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  # ---------- Frontend -> Vercel ----------
+  deploy-vercel:
+    name: Deploy frontend to Vercel
+    runs-on: ubuntu-latest
+    if: ${{ secrets.VERCEL_TOKEN != '' && secrets.VERCEL_ORG_ID != '' && secrets.VERCEL_PROJECT_ID != '' }}
+    defaults:
+      run:
+        working-directory: fronted/frontend
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: fronted/frontend/package-lock.json
+
+      - name: Install Vercel CLI
+        run: npm i -g vercel
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Pull Vercel environment
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build project artifacts
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy to Vercel
+        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+  # ---------- Backend -> Render (deploy hook) ----------
+  deploy-render-backend:
+    name: Deploy backend to Render
+    runs-on: ubuntu-latest
+    if: ${{ secrets.RENDER_DEPLOY_HOOK_BACKEND != '' }}
+    steps:
+      - name: Trigger Render deploy hook (backend)
+        run: curl -fLsS "${{ secrets.RENDER_DEPLOY_HOOK_BACKEND }}"
+
+  # ---------- RAG Service -> Render (deploy hook) ----------
+  deploy-render-rag:
+    name: Deploy RAG service to Render
+    runs-on: ubuntu-latest
+    if: ${{ secrets.RENDER_DEPLOY_HOOK_RAG != '' }}
+    steps:
+      - name: Trigger Render deploy hook (RAG)
+        run: curl -fLsS "${{ secrets.RENDER_DEPLOY_HOOK_RAG }}"

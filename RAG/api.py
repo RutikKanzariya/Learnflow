@@ -25,6 +25,23 @@ import io
 # Load environment variables
 load_dotenv()
 
+import os
+
+
+# Allowed browser origins (comma-separated, e.g. frontend URLs)
+ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv(
+        "ALLOWED_ORIGINS",
+        "http://localhost:5173,http://127.0.0.1:5173",
+    ).split(",")
+    if origin.strip()
+]
+
+# Directory where the ChromaDB vector store lives.
+# Use an absolute path (e.g. a Render disk mount) in production.
+CHROMA_DB_DIR = os.getenv("CHROMA_DB_DIR", "chroma-db")
+
 
 # -----------------------------
 # FASTAPI APPLICATION
@@ -43,14 +60,16 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
 
 
 # -----------------------------
@@ -63,7 +82,7 @@ embedding_model = GoogleGenerativeAIEmbeddings(
 
 
 vector_store = Chroma(
-    persist_directory="chroma-db",
+    persist_directory=CHROMA_DB_DIR,
     embedding_function=embedding_model,
 )
 
