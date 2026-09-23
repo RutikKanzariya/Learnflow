@@ -41,14 +41,18 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn api:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
-    disk:
-      name: chroma-data
-      mountPath: /var/data
-      sizeGB: 1
+    # NOTE: Free-tier Render does not support disks. Uploaded vector data is
+    # stored in the ephemeral filesystem and is reset on redeploy (re-upload
+    # documents to rebuild it). On a paid plan, add a disk here and point
+    # CHROMA_DB_DIR at its mount path, e.g.:
+    # disk:
+    #   name: chroma-data
+    #   mountPath: /var/data
+    #   sizeGB: 1
     envVars:
       - key: GEMINI_API_KEY
         sync: false # Google Gemini API key
       - key: CHROMA_DB_DIR
-        value: /var/data/chroma # persist ChromaDB on the disk
+        value: chroma-db # local dir on free tier; use disk mount path on paid plans
       - key: ALLOWED_ORIGINS
         value: https://your-frontend.vercel.app
