@@ -55,7 +55,7 @@ services:
       - key: CHROMA_DB_DIR
         value: chroma-db # local dir on free tier; use disk mount path on paid plans
       - key: ALLOWED_ORIGINS
-        value: https://your-frontend.vercel.app
+        value: https://learnflow.vercel.app,https://learnflow-git-main-rutik-kanzariya.vercel.app,http://localhost:5173
       - key: OMP_NUM_THREADS
         value: "1" # keep memory low on the free tier
       - key: TOKENIZERS_PARALLELISM
