@@ -4,11 +4,12 @@
 #   1. Push this file to GitHub.
 #   2. In the Render dashboard: New -> Blueprint, select the LearnFlow repo.
 #   3. Fill in the env vars marked `sync: false` (MONGO_URI, JWT_SECRET,
-#      GEMINI_API_KEY, FRONTEND_URL, AI_SERVICE_URL, ALLOWED_ORIGINS).
+#      ADMIN_KEY, GROQ_API_KEY, FRONTEND_URL, AI_SERVICE_URL, ALLOWED_ORIGINS).
 #   4. Every push to `main` auto-deploys, and the GitHub `CD` workflow can
 #      trigger deploys via the Render deploy hooks.
 #
 # Frontend is deployed separately to Vercel (see .github/workflows/deploy.yml).
+# Vercel needs one env var: VITE_API_URL=https://learnflow-backend.onrender.com/api/v1
 
 services:
   # ---------------- Backend (Node.js / Express) ----------------
@@ -25,6 +26,8 @@ services:
         sync: false # MongoDB Atlas connection string
       - key: JWT_SECRET
         sync: false # long random string used to sign JWTs
+      - key: ADMIN_KEY
+        sync: false # optional: register with this key to create an admin account
       - key: FRONTEND_URL
         value: https://learnflow.vercel.app,https://learnflow-git-main-rutik-kanzariya.vercel.app,http://localhost:5173
       - key: AI_SERVICE_URL
@@ -50,8 +53,14 @@ services:
     #   mountPath: /var/data
     #   sizeGB: 1
     envVars:
-      - key: GEMINI_API_KEY
-        sync: false # Google Gemini API key
+      - key: GROQ_API_KEY
+        sync: false # Groq API key (https://console.groq.com) - same key + format as OpenAI
+      - key: GROQ_MODEL
+        value: openai/gpt-oss-120b
+      - key: GROQ_BASE_URL
+        value: https://api.groq.com/openai/v1
+      - key: EMBEDDING_PROVIDER
+        value: local # "local" = sentence-transformers, no extra API key needed
       - key: CHROMA_DB_DIR
         value: chroma-db # local dir on free tier; use disk mount path on paid plans
       - key: ALLOWED_ORIGINS
