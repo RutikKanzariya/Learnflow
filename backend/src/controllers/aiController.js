@@ -1,40 +1,15 @@
-import generateRoadmap,{generateQuiz} from "../services/aiService.js";
+import {
+  generateRoadmap,
+  generateQuiz,
+  askTutor,
+} from "../services/aiService.js";
+
 import Lesson from "../models/Lesson.js";
 import Quiz from "../models/Quiz.js";
-
 
 const AI_SERVICE_URL = (
   process.env.AI_SERVICE_URL || "http://localhost:8000"
 ).replace(/\/+$/, "");
-
-const askTutor = async (question) => {
-  const response = await fetch(`${AI_SERVICE_URL}/ask`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ question }),
-  });
-
-  if (!response.ok) {
-    throw new Error("RAG service failed");
-  }
-
-  const data = await response.json();
-
-  let answer = data.answer;
-
-  if (Array.isArray(answer)) {
-    answer = answer
-      .map((item) => item.text || "")
-      .join("");
-  }
-
-  return {
-    answer,
-    sources: data.sources,
-  };
-};
 
 export const uploadDocument = async (req, res) => {
   try {
@@ -69,6 +44,7 @@ export const uploadDocument = async (req, res) => {
     const response = await fetch(`${AI_SERVICE_URL}/upload`, {
       method: "POST",
       body: formData,
+      signal: AbortSignal.timeout(180000),
     });
 
     const responseText = await response.text();
@@ -85,8 +61,10 @@ export const uploadDocument = async (req, res) => {
   } catch (error) {
     console.error("PDF upload error:", error.message);
 
-    res.status(500).json({
-      message: "Failed to upload PDF",
+    res.status(502).json({
+      message:
+        "Failed to upload PDF. Make sure the AI (RAG) service is running.",
+      detail: error.message,
     });
   }
 };
@@ -107,8 +85,9 @@ export const createRoadmap = async (req, res) => {
   } catch (error) {
     console.error("Roadmap generation error:", error.message);
 
-    res.status(500).json({
+    res.status(502).json({
       message: "Failed to generate roadmap",
+      detail: error.message,
     });
   }
 };
@@ -129,38 +108,17 @@ export const tutorQuestion = async (req, res) => {
       question: question.trim(),
       answer: result.answer,
       sources: result.sources,
+      type: result.type,
     });
   } catch (error) {
     console.error("Tutor error:", error.message);
 
-    res.status(500).json({
+    res.status(502).json({
       message: "Failed to answer question",
+      detail: error.message,
     });
   }
 };
-
-// export const createAIQuiz = async (req, res) => {
-//   try {
-//     const { topic } = req.body || {};
-
-//     if (!topic || !topic.trim()) {
-//       return res.status(400).json({
-//         message: "Topic is required",
-//       });
-//     }
-
-//     const result = await generateQuiz(topic.trim());
-
-//     res.status(200).json(result);
-//   } catch (error) {
-//     console.error("AI quiz error:", error.message);
-
-//     res.status(500).json({
-//       message: "Failed to generate AI quiz",
-//     });
-//   }
-// };
-
 
 export const createAIQuiz = async (req, res) => {
   try {
@@ -180,21 +138,15 @@ export const createAIQuiz = async (req, res) => {
       });
     }
 
-    const result = await generateQuiz(topic.trim());
+    const result = await generateQuiz(topic.trim(), lesson.content);
 
     let parsedQuiz = result.quiz;
 
     // The RAG service returns a parsed JSON object,
     // but handle a raw JSON string as a fallback.
     if (typeof parsedQuiz === "string") {
-      let quizText = parsedQuiz
-        .replace(/^```json\s*/i, "")
-        .replace(/^```\s*/i, "")
-        .replace(/\s*```$/i, "")
-        .trim();
-
       try {
-        parsedQuiz = JSON.parse(quizText);
+        parsedQuiz = JSON.parse(parsedQuiz);
       } catch (error) {
         return res.status(502).json({
           message: "AI returned invalid quiz JSON",
@@ -229,8 +181,9 @@ export const createAIQuiz = async (req, res) => {
   } catch (error) {
     console.error("AI quiz creation error:", error.message);
 
-    res.status(500).json({
+    res.status(502).json({
       message: "Failed to create AI quiz",
+      detail: error.message,
     });
   }
 };

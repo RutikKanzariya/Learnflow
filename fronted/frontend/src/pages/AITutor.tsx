@@ -52,6 +52,7 @@ function AITutor() {
 
       setError(
         error.response?.data?.message ||
+          error.response?.data?.detail ||
           "Failed to get an answer from the AI Tutor."
       );
     } finally {
@@ -209,10 +210,23 @@ function AITutor() {
                 <button
                   type="button"
                   onClick={() =>
-                    setQuestion("What should I remember from this topic?")
+                    setQuestion(
+                      "What should I remember from this topic?"
+                    )
                   }
                 >
                   What should I remember?
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setQuestion(
+                      "Create a complete learning roadmap to learn Python for beginners."
+                    )
+                  }
+                >
+                  🗺️ Learning roadmap
                 </button>
               </div>
             </div>
@@ -232,7 +246,14 @@ function AITutor() {
               </div>
 
               <div className="chat-bubble">
-                <p>{message.content}</p>
+                <p
+                  style={{
+                    whiteSpace: "pre-wrap",
+                    margin: 0,
+                  }}
+                >
+                  {message.content}
+                </p>
 
                 {message.role === "assistant" &&
                   message.sources !== undefined && (

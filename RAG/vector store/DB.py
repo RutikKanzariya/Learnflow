@@ -1,11 +1,14 @@
-# from langchain_community.vectorstores import Chorma
 from langchain_chroma import Chroma
-from langchain_google_genai.embeddings import GoogleGenerativeAIEmbeddings
 from dotenv import load_dotenv
-
 
 load_dotenv()
 from langchain_core.documents import Document
+
+from providers import (
+    get_embeddings,
+    get_llm,
+    build_chroma_collection_name,
+)
 
 
 docs = [
@@ -15,25 +18,25 @@ docs = [
 ]
 
 
-embedding_model = GoogleGenerativeAIEmbeddings(
-    model="gemini-embedding-2"
-)
+embedding_model = get_embeddings()
+
+COLLECTION_NAME = build_chroma_collection_name()
 
 vector_store = Chroma.from_documents(
     documents=docs,
-    embedding = embedding_model,
-    persist_directory = 'chroma-db'
-
+    embedding=embedding_model,
+    collection_name=COLLECTION_NAME,
+    persist_directory="chroma-db",
 )
 
 
-result = vector_store.similarity_search("What is used for Data analysis?",k=2)
+result = vector_store.similarity_search("What is used for Data analysis?", k=2)
 for r in result:
     print(r.page_content)
     print(r.metadata)
 
 retriver = vector_store.as_retriever()
 
-docs = retriver.invoke("Explain Deep Learning")
-for d in docs:
+retrieved_docs = retriver.invoke("Explain Deep Learning")
+for d in retrieved_docs:
     print(d.page_content)

@@ -3,17 +3,17 @@ from pathlib import Path
 from langchain_community.document_loaders import (
     PyPDFLoader,
     TextLoader,
-    WebBaseLoader,
 )
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_community.vectorstores import Chroma
 
+from providers import get_embeddings, build_chroma_collection_name
 
-embedding = GoogleGenerativeAIEmbeddings(
-    model="gemini-embedding-2"
-)
+
+embedding = get_embeddings()
+
+COLLECTION_NAME = build_chroma_collection_name()
 
 
 def load_document(source):
@@ -49,7 +49,7 @@ def process_pdf(file_path, document_id):
 
     # 4. Create embeddings and store in Chroma
     vector_store = Chroma(
-        collection_name=f"document_{document_id}",
+        collection_name=COLLECTION_NAME,
         embedding_function=embedding,
         persist_directory="chroma-db",
     )

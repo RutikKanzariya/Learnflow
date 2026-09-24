@@ -5,27 +5,27 @@ from dotenv import load_dotenv
 import io
 import json
 import re
-
-from langchain_google_genai import (
-    ChatGoogleGenerativeAI,
-    GoogleGenerativeAIEmbeddings,
-)
+import os
 
 from langchain_chroma import Chroma
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.documents import Document
-
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from pypdf import PdfReader
 
-import io
+from providers import (
+    get_llm,
+    get_embeddings,
+    llm_text,
+    strip_code_fences,
+    build_chroma_collection_name,
+    get_api_key,
+)
 
 
 # Load environment variables
 load_dotenv()
-
-import os
 
 
 # Allowed browser origins (comma-separated, e.g. frontend URLs)
@@ -41,6 +41,13 @@ ALLOWED_ORIGINS = [
 # Directory where the ChromaDB vector store lives.
 # Use an absolute path (e.g. a Render disk mount) in production.
 CHROMA_DB_DIR = os.getenv("CHROMA_DB_DIR", "chroma-db")
+
+COLLECTION_NAME = build_chroma_collection_name()
+
+
+# Make sure the API key is present early so failures
+# are loud and clear instead of a confusing 500.
+get_api_key()
 
 
 # -----------------------------
@@ -76,15 +83,54 @@ def health():
 # RAG SETUP
 # -----------------------------
 
-embedding_model = GoogleGenerativeAIEmbeddings(
-    model="gemini-embedding-2"
-)
+embedding_model = get_embeddings()
 
 
-vector_store = Chroma(
-    persist_directory=CHROMA_DB_DIR,
-    embedding_function=embedding_model,
-)
+def _create_vector_store():
+    return Chroma(
+        collection_name=COLLECTION_NAME,
+        embedding_function=embedding_model,
+        persist_directory=CHROMA_DB_DIR,
+    )
+
+
+vector_store = _create_vector_store()
+
+
+def _reset_vector_store():
+    """Delete and recreate the collection.
+
+    Used when an incompatible index (different vector dimensions,
+    e.g. from a previous embedding provider) is detected.
+    """
+    global vector_store
+    try:
+        vector_store._client.delete_collection(
+            vector_store._collection.name
+        )
+    except Exception:
+        pass
+
+    vector_store = _create_vector_store()
+
+
+def _index_documents(chunk_docs):
+    """Add documents to the vector store.
+
+    If the existing index uses different vector dimensions
+    (old embedding provider), reset it once and retry.
+    """
+    try:
+        vector_store.add_documents(chunk_docs)
+    except Exception as error:
+        message = str(error).lower()
+
+        if "dimension" in message or "expected" in message:
+            print("Vector store incompatible, resetting index.")
+            _reset_vector_store()
+            vector_store.add_documents(chunk_docs)
+        else:
+            raise
 
 
 retriever = vector_store.as_retriever(
@@ -97,22 +143,23 @@ retriever = vector_store.as_retriever(
 )
 
 
-llm = ChatGoogleGenerativeAI(
-    model="models/gemini-flash-latest"
-)
+llm = get_llm()
 
 
 prompt = ChatPromptTemplate([
     (
         "system",
-        """You are a helpful AI tutor.
+        """You are a helpful AI tutor for LearnFlow.
 
 Use ONLY the provided context to answer the question.
 
-If the answer is not present in the context,
-say:
+If the answer is not present in the context, say:
 
 "I could not find the answer in the document."
+
+Always answer in plain text using markdown formatting for structure.
+Never return JSON. Never wrap your answer in code fences (```).
+Do not mention how you retrieved the answer.
 """
     ),
     (
@@ -128,6 +175,165 @@ Question:
 
 
 # -----------------------------
+# HELPERS
+# -----------------------------
+
+def _retrieve(question):
+    """Safely retrieve context for a question."""
+    try:
+        docs = retriever.invoke(question)
+        return docs
+    except Exception as error:
+        print("Retrieval error:", str(error))
+        return []
+
+
+def _extract_json(raw_content):
+    """Turn a model response into a Python object.
+
+    Handles markdown code fences and leading/trailing prose.
+    Raises ValueError if no valid JSON can be extracted.
+    """
+    if isinstance(raw_content, (dict, list)):
+        return raw_content
+
+    text = strip_code_fences(llm_text(raw_content))
+
+    # Find the outermost JSON object or array.
+    start_indexes = [i for i in (text.find("{"), text.find("[")) if i != -1]
+    end_indexes = [i for i in (text.rfind("}"), text.rfind("]")) if i != -1]
+
+    if not start_indexes or not end_indexes:
+        raise ValueError("No JSON found in model response")
+
+    start = min(start_indexes)
+    end = max(end_indexes) + 1
+
+    try:
+        return json.loads(text[start:end])
+    except json.JSONDecodeError:
+        pass
+
+    # Last attempt: try progressively shorter slices.
+    for cut in range(start, end):
+        for stop in range(end, cut, -1):
+            try:
+                return json.loads(text[cut:stop])
+            except (json.JSONDecodeError, ValueError):
+                continue
+
+    raise ValueError("Invalid JSON in model response")
+
+
+ROADMAP_KEYWORDS = (
+    "roadmap",
+    "learning path",
+    "study plan",
+    "how to learn",
+    "how do i learn",
+    "how should i learn",
+    "learn ",
+    "course for ",
+    "learning plan",
+)
+
+
+def _is_roadmap_query(question):
+    lowered = question.lower()
+
+    if any(keyword in lowered for keyword in ROADMAP_KEYWORDS):
+        # Avoid treating plain fact questions like
+        # "what does this mean" as roadmaps.
+        if any(
+            word in lowered
+            for word in (
+                "roadmap",
+                "learning path",
+                "study plan",
+                "learning plan",
+            )
+        ):
+            return True
+
+        if " how to learn " in f" {lowered} ":
+            return True
+
+        if lowered.startswith("learn "):
+            return True
+
+        if lowered.startswith("how do i learn"):
+            return True
+
+        if lowered.startswith("how should i learn"):
+            return True
+
+        # "how to learn X" / "how to learn X for beginners"
+        if lowered.startswith("how to learn"):
+            return True
+
+    return False
+
+
+def _make_roadmap(goal, content=""):
+    """Generate a complete learning roadmap in plain text."""
+
+    content = (content or "").strip()
+
+    docs = []
+    context = ""
+
+    if content:
+        context = content
+    else:
+        docs = _retrieve(f"Create a learning roadmap for {goal}")
+        context = "\n\n".join(doc.page_content for doc in docs).strip()
+
+    context_block = ""
+    if context:
+        context_block = f"""Use the following context when available to ground your roadmap.
+Context:
+{context}
+"""
+
+    roadmap_prompt = f"""You are an expert learning advisor and curriculum designer.
+
+Create a COMPLETE, step-by-step learning roadmap to achieve this goal:
+
+Goal: {goal}
+
+{context_block}
+Requirements:
+- Start from absolute beginner level and progress step by step.
+- Structure the roadmap as numbered phases (e.g. Phase 1, Phase 2, ...).
+- For every phase include:
+  * What to learn (topics/concepts)
+  * Why it matters
+  * Practical actions/resources (books, courses, exercises)
+  * Recommended time to spend
+  * A small practical mini-project or exercise
+- Cover fundamentals first, then tools, then advanced concepts,
+  then real-world projects and portfolio work.
+- Finish with tips for staying consistent and next steps.
+
+Rules:
+- Respond in plain text using markdown headings, numbered lists
+  and bullet points. Make it highly readable.
+- NEVER return JSON. NEVER wrap the response in code fences (```).
+"""
+
+    response = llm.invoke(roadmap_prompt)
+
+    roadmap = strip_code_fences(llm_text(response)).strip()
+
+    if not roadmap:
+        roadmap = f"Here is a suggested roadmap to achieve: {goal}.\n" \
+                  "Start with the fundamentals, practice daily, " \
+                  "and build small projects as you progress."
+
+    return roadmap, len(docs)
+
+
+# -----------------------------
 # REQUEST MODELS
 # -----------------------------
 
@@ -135,8 +341,14 @@ class QuestionRequest(BaseModel):
     question: str
 
 
+class RoadmapRequest(BaseModel):
+    goal: str
+    content: str = ""
+
+
 class QuizRequest(BaseModel):
     topic: str
+    content: str = ""
 
 
 class FlashcardRequest(BaseModel):
@@ -235,7 +447,7 @@ async def upload_document(
         ]
 
         # Index into the vector store
-        vector_store.add_documents(chunk_docs)
+        _index_documents(chunk_docs)
 
         return {
             "filename": file.filename,
@@ -257,12 +469,12 @@ async def upload_document(
 
         raise HTTPException(
             status_code=400,
-            detail="Could not read PDF",
+            detail=f"Could not read PDF: {error}",
         )
 
 
 # -----------------------------
-# RAG QUESTION
+# RAG QUESTION  (plain-text only)
 # -----------------------------
 
 @app.post("/ask")
@@ -280,11 +492,20 @@ def ask_question(
 
     try:
 
+        # The user is asking for a learning path /
+        # course roadmap -> give a full roadmap.
+        if _is_roadmap_query(question):
+            roadmap, source_count = _make_roadmap(question)
+
+            return {
+                "question": question,
+                "answer": roadmap,
+                "sources": source_count,
+                "type": "roadmap",
+            }
+
         # Retrieve relevant documents
-        try:
-            docs = retriever.invoke(question)
-        except Exception:
-            docs = []
+        docs = _retrieve(question)
 
         # Combine retrieved documents
         context = "\n\n".join(
@@ -295,12 +516,12 @@ def ask_question(
         # If no document has been uploaded,
         # answer using the LLM general knowledge.
         if not context.strip():
-            fallback_prompt = f"""You are a helpful AI tutor.
+            fallback_prompt = f"""You are a helpful AI tutor for LearnFlow.
 
-No document has been uploaded, so answer the
-question using your own general knowledge.
+No document has been uploaded, so answer the question using your own general knowledge.
 
-Give a clear and well formatted answer.
+Give a clear and well formatted answer using plain text with markdown.
+Never return JSON. Never wrap your answer in code fences (```).
 
 Question:
 {question}
@@ -312,8 +533,11 @@ Question:
 
             return {
                 "question": question,
-                "answer": response.content,
+                "answer": strip_code_fences(
+                    llm_text(response)
+                ),
                 "sources": len(docs),
+                "type": "answer",
             }
 
         # Build prompt
@@ -331,9 +555,15 @@ Question:
 
         return {
             "question": question,
-            "answer": response.content,
+            "answer": strip_code_fences(
+                llm_text(response)
+            ),
             "sources": len(docs),
+            "type": "answer",
         }
+
+    except HTTPException:
+        raise
 
     except Exception as error:
 
@@ -349,8 +579,45 @@ Question:
 
 
 # -----------------------------
-# AI QUIZ
+# LEARNING ROADMAP
 # -----------------------------
+
+@app.post("/roadmap")
+def generate_roadmap(
+    request: RoadmapRequest
+):
+
+    goal = request.goal.strip()
+
+    if not goal:
+        raise HTTPException(
+            status_code=400,
+            detail="Goal is required",
+        )
+
+    try:
+
+        roadmap, source_count = _make_roadmap(goal, request.content)
+
+        return {
+            "goal": goal,
+            "roadmap": roadmap,
+            "sources": source_count,
+            "type": "roadmap",
+        }
+
+    except Exception as error:
+
+        print(
+            "Roadmap generation error:",
+            str(error)
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate roadmap: {error}",
+        )
+
 
 # -----------------------------
 # AI QUIZ
@@ -371,21 +638,25 @@ def generate_quiz(
 
     try:
 
-        # Retrieve relevant documents
-        try:
-            docs = retriever.invoke(
-                f"Create a quiz about {topic}"
+        content = (request.content or "").strip()
+
+        has_context = False
+        context = ""
+        docs = []
+
+        if content:
+            has_context = True
+            context = content
+        else:
+            # Retrieve relevant documents
+            docs = _retrieve(f"Create a quiz about {topic}")
+
+            # Combine retrieved context
+            context = "\n\n".join(
+                doc.page_content for doc in docs
             )
-        except Exception:
-            docs = []
 
-        # Combine retrieved context
-        context = "\n\n".join(
-            doc.page_content
-            for doc in docs
-        )
-
-        has_context = bool(context.strip())
+            has_context = bool(context.strip())
 
         # If a document was uploaded, base the quiz
         # only on it. Otherwise use general knowledge.
@@ -444,58 +715,25 @@ Context:
 {context}
 """
 
-        # Ask Gemini
+        # Ask Grok
         response = llm.invoke(
             quiz_prompt
         )
 
         raw_content = response.content
 
-        print("Gemini quiz response:")
+        print("Grok quiz response:")
         print(raw_content)
-
-        # Convert response to string
-        if isinstance(raw_content, list):
-            raw_content = "".join(
-                str(item)
-                for item in raw_content
-            )
-
-        raw_content = str(raw_content).strip()
-
-        # Remove markdown JSON fences if Gemini adds them
-        raw_content = re.sub(
-            r"^```json\s*",
-            "",
-            raw_content,
-            flags=re.IGNORECASE,
-        )
-
-        raw_content = re.sub(
-            r"^```\s*",
-            "",
-            raw_content,
-        )
-
-        raw_content = re.sub(
-            r"\s*```$",
-            "",
-            raw_content,
-        )
-
-        raw_content = raw_content.strip()
 
         # Parse JSON
         try:
 
-            quiz_data = json.loads(
-                raw_content
-            )
+            quiz_data = _extract_json(raw_content)
 
-        except json.JSONDecodeError as json_error:
+        except Exception as json_error:
 
             print(
-                "Invalid Gemini JSON:",
+                "Invalid Grok quiz JSON:",
                 json_error
             )
 
@@ -582,7 +820,7 @@ Context:
 
         raise HTTPException(
             status_code=500,
-            detail="Failed to generate quiz",
+            detail=f"Failed to generate quiz: {error}",
         )
 
 
@@ -613,12 +851,9 @@ def generate_flashcards(
         # Only use retrieval when no content
         # was supplied by the caller.
         if not content:
-            try:
-                docs = retriever.invoke(
-                    f"Create flashcards about {topic}"
-                )
-            except Exception:
-                docs = []
+            docs = _retrieve(
+                f"Create flashcards about {topic}"
+            )
 
             context = "\n\n".join(
                 doc.page_content
@@ -680,58 +915,25 @@ Lesson content:
 {content}
 """
 
-        # Ask Gemini
+        # Ask Grok
         response = llm.invoke(
             flashcard_prompt
         )
 
         raw_content = response.content
 
-        print("Gemini flashcards response:")
+        print("Grok flashcards response:")
         print(raw_content)
-
-        # Convert response to string
-        if isinstance(raw_content, list):
-            raw_content = "".join(
-                str(item)
-                for item in raw_content
-            )
-
-        raw_content = str(raw_content).strip()
-
-        # Remove markdown JSON fences if Gemini adds them
-        raw_content = re.sub(
-            r"^```json\s*",
-            "",
-            raw_content,
-            flags=re.IGNORECASE,
-        )
-
-        raw_content = re.sub(
-            r"^```\s*",
-            "",
-            raw_content,
-        )
-
-        raw_content = re.sub(
-            r"\s*```$",
-            "",
-            raw_content,
-        )
-
-        raw_content = raw_content.strip()
 
         # Parse JSON
         try:
 
-            flashcard_data = json.loads(
-                raw_content
-            )
+            flashcard_data = _extract_json(raw_content)
 
-        except json.JSONDecodeError as json_error:
+        except Exception as json_error:
 
             print(
-                "Invalid Gemini flashcard JSON:",
+                "Invalid Grok flashcard JSON:",
                 json_error
             )
 
@@ -760,7 +962,11 @@ Lesson content:
                 detail="AI flashcard cards must be an array",
             )
 
+        clean_cards = []
+
         for card in cards:
+            if isinstance(card, str):
+                card = {"front": card, "back": ""}
 
             if "front" not in card or "back" not in card:
                 raise HTTPException(
@@ -768,9 +974,25 @@ Lesson content:
                     detail="Each flashcard must have a front and back",
                 )
 
+            if str(card.get("front") or "").strip() and str(
+                card.get("back") or ""
+            ).strip():
+                clean_cards.append(
+                    {
+                        "front": str(card["front"]).strip(),
+                        "back": str(card["back"]).strip(),
+                    }
+                )
+
+        if not clean_cards:
+            raise HTTPException(
+                status_code=500,
+                detail="AI did not generate any usable flashcards",
+            )
+
         return {
             "topic": topic,
-            "cards": cards,
+            "cards": clean_cards,
             "sources": len(docs),
         }
 
@@ -786,5 +1008,5 @@ Lesson content:
 
         raise HTTPException(
             status_code=500,
-            detail="Failed to generate flashcards",
+            detail=f"Failed to generate flashcards: {error}",
         )

@@ -4,21 +4,23 @@ uvicorn
 
 # Environment Variables
 python-dotenv
+python-multipart
 
 # LangChain
 langchain
 langchain-core
 langchain-community
 langchain-text-splitters
+langchain-chroma
 
-# LLM Integration (Google Gemini)
-langchain-google-genai
-google-genai
+# LLM Integration (Grok / xAI - OpenAI compatible)
+langchain-openai
+openai
 
 # Vector Database
 chromadb
 
-# Embeddings
+# Embeddings (local, no external API required)
 sentence-transformers
 
 # Document Processing
@@ -30,4 +32,3 @@ tiktoken
 
 # HTTP Requests
 requests
-langchain-chroma

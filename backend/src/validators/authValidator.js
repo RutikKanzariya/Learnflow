@@ -17,6 +17,14 @@ export const registerSchema = z.object({
       .string()
       .min(6, "Password must be at least 6 characters")
       .max(100, "Password is too long"),
+
+    adminKey: z
+      .string()
+      .trim()
+      .min(1)
+      .max(200)
+      .optional()
+      .or(z.literal("")),
   }),
 
   params: z.object({}),

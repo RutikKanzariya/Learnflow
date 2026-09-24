@@ -2,191 +2,190 @@ const AI_SERVICE_URL = (
   process.env.AI_SERVICE_URL || "http://localhost:8000"
 ).replace(/\/+$/, "");
 
-const generateRoadmap = async (goal) => {
-  const response = await fetch(`${AI_SERVICE_URL}/ask`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      question: `Create a learning roadmap for this goal: ${goal}`,
-    }),
-  });
+const AI_TIMEOUT_MS = Number(process.env.AI_TIMEOUT_MS || 180000);
 
-  if (!response.ok) {
-    throw new Error("RAG service failed");
+// -------------------------------------------------------------
+// Helpers
+// -------------------------------------------------------------
+
+const toText = (value) => {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => {
+        if (typeof item === "string") return item;
+        if (item && typeof item === "object" && "text" in item) {
+          return item.text || "";
+        }
+        if (item && typeof item === "object" && "content" in item) {
+          return item.content || "";
+        }
+        return typeof item === "string" ? item : "";
+      })
+      .join("");
   }
 
-  const data = await response.json();
-
-  let answer = data.answer;
-  if(Array.isArray(answer)){
-    answer = answer.map((item) => item.text || "").join("");
-  }
-  return {
-    goal,
-    roadmap: data.answer,
-    sources: data.sources,
-  };
+  return typeof value === "string" ? value : "";
 };
 
-// const generateQuiz = async (topic) => {
-//   const response = await fetch("http://localhost:8000/ask", {
-//     method: "POST",
-//     headers: {
-//       "Content-Type": "application/json",
-//     },
-//     body: JSON.stringify({
-//       question: `Create a 5-question multiple-choice quiz about ${topic}.
-// Use only the information available in the document.
-// For each question provide:
-// 1. question
-// 2. four options
-// 3. correct answer
-// 4. topic`,
-//     }),
-//   });
+const stripCodeFences = (text) => {
+  if (!text) return "";
+  return text
+    .replace(/^```(?:json|text|markdown)?\s*/i, "")
+    .replace(/\s*```\s*$/i, "")
+    .trim();
+};
 
-//   if (!response.ok) {
-//     throw new Error("RAG service failed");
-//   }
+const extractJSON = (raw) => {
+  if (raw && typeof raw === "object") return raw;
 
-//   const data = await response.json();
+  const text = stripCodeFences(toText(raw));
 
-//   let answer = data.answer;
+  const startChars = [text.indexOf("{"), text.indexOf("[")].filter(
+    (i) => i !== -1
+  );
 
-//   if (Array.isArray(answer)) {
-//     answer = answer
-//       .map((item) => item.text || "")
-//       .join("");
-//   }
+  const endChars = [text.lastIndexOf("}"), text.lastIndexOf("]")].filter(
+    (i) => i !== -1
+  );
 
-//   return {
-//     topic,
-//     quiz: answer,
-//     sources: data.sources,
-//   };
-// };
+  if (startChars.length === 0 || endChars.length === 0) {
+    throw new Error("No JSON found in AI response");
+  }
 
-// const generateQuiz = async (topic) => {
-//   const response = await fetch("http://localhost:8000/quiz", {
-//     method: "POST",
-//     headers: {
-//       "Content-Type": "application/json",
-//     },
-//     body: JSON.stringify({
-//       topic,
-//     }),
-//   });
+  const start = Math.min(...startChars);
+  const end = Math.max(...endChars) + 1;
 
-//   if (!response.ok) {
-//     throw new Error("RAG quiz service failed");
-//   }
+  return JSON.parse(text.slice(start, end));
+};
 
-//   const data = await response.json();
-
-//   let quiz = data.quiz;
-
-//   if (Array.isArray(quiz)) {
-//     quiz = quiz.map((item) => item.text || "").join("");
-//   }
-
-//   return {
-//     topic,
-//     quiz,
-//     sources: data.sources,
-//   };
-// };
-
-const generateQuiz = async (topic) => {
-  const response = await fetch(`${AI_SERVICE_URL}/quiz`, {
+const post = async (path, body) => {
+  const response = await fetch(`${AI_SERVICE_URL}${path}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      topic: topic.trim(),
-    }),
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(AI_TIMEOUT_MS),
   });
 
   const responseText = await response.text();
 
   if (!response.ok) {
-    console.error("RAG quiz response:", responseText);
-    throw new Error(`RAG quiz service failed: ${responseText}`);
+    console.error(`RAG ${path} failed (${response.status}):`, responseText);
+    throw new Error(`RAG service error (${response.status})`);
   }
 
-  let data;
-
   try {
-    data = JSON.parse(responseText);
+    return JSON.parse(responseText);
   } catch (error) {
     throw new Error("RAG returned invalid JSON");
   }
+};
 
-  let quiz = data.quiz;
+// -------------------------------------------------------------
+// Roadmap
+// -------------------------------------------------------------
 
-  if (Array.isArray(quiz)) {
-    quiz = quiz.map((item) => item.text || "").join("");
+const generateRoadmap = async (goal, content) => {
+  const data = await post("/roadmap", {
+    goal,
+    content: content || "",
+  });
+
+  let roadmap = toText(data.roadmap);
+
+  if (Array.isArray(data.roadmap)) {
+    roadmap = data.roadmap
+      .map((item) => {
+        if (typeof item === "string") return item;
+        return item && typeof item === "object" && item.text ? item.text : "";
+      })
+      .join("");
   }
+
+  roadmap = stripCodeFences(roadmap);
+
+  return {
+    goal,
+    roadmap,
+    sources: data.sources || 0,
+    type: data.type || "roadmap",
+  };
+};
+
+// -------------------------------------------------------------
+// Ask (AI tutor)
+// -------------------------------------------------------------
+
+const askTutor = async (question) => {
+  const data = await post("/ask", { question });
+
+  let answer = toText(data.answer);
+
+  if (Array.isArray(data.answer)) {
+    answer = data.answer
+      .map((item) => {
+        if (typeof item === "string") return item;
+        return item && typeof item === "object" && item.text ? item.text : "";
+      })
+      .join("");
+  }
+
+  answer = stripCodeFences(answer);
+
+  return {
+    answer,
+    sources: data.sources || 0,
+    type: data.type || "answer",
+  };
+};
+
+// -------------------------------------------------------------
+// Quiz
+// -------------------------------------------------------------
+
+const generateQuiz = async (topic, content) => {
+  const data = await post("/quiz", {
+    topic: topic.trim(),
+    content: content || "",
+  });
+
+  const quiz = extractJSON(data.quiz);
 
   return {
     topic,
     quiz,
-    sources: data.sources,
+    sources: data.sources || 0,
   };
 };
 
+// -------------------------------------------------------------
+// Flashcards
+// -------------------------------------------------------------
+
 const generateFlashcards = async (topic, content) => {
-  const response = await fetch(`${AI_SERVICE_URL}/flashcards`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      topic: topic.trim(),
-      content: content || "",
-    }),
+  const data = await post("/flashcards", {
+    topic: topic.trim(),
+    content: content || "",
   });
 
-  const responseText = await response.text();
+  let cards = Array.isArray(data.cards) ? data.cards : [];
 
-  if (!response.ok) {
-    console.error("RAG flashcards response:", responseText);
-    throw new Error(`RAG flashcards service failed: ${responseText}`);
-  }
-
-  let data;
-
-  try {
-    data = JSON.parse(responseText);
-  } catch (error) {
-    throw new Error("RAG returned invalid JSON");
-  }
-
-  let cards = data.cards;
-
-  if (Array.isArray(cards)) {
-    cards = cards
-      .map((item) => {
-        if (typeof item === "string") {
-          return { front: item, back: "" };
-        }
-
-        return item;
-      })
-      .filter(
-        (item) => item && item.front && item.back
-      );
-  }
+  cards = cards
+    .map((item) => {
+      if (typeof item === "string") {
+        return { front: item, back: "" };
+      }
+      return item;
+    })
+    .filter((item) => item && item.front && item.back);
 
   return {
     topic,
     cards,
-    sources: data.sources,
+    sources: data.sources || 0,
   };
 };
-export { generateQuiz, generateFlashcards };
 
+export { generateQuiz, generateFlashcards, askTutor, generateRoadmap };
 export default generateRoadmap;
-

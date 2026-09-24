@@ -20,6 +20,7 @@ import SpacedRepetition from "./pages/SpacedRepetition";
 import Flashcards from "./pages/Flashcards";
 import StudyRooms from "./pages/StudyRooms";
 import Notes from "./pages/Notes";
+import Admin from "./pages/Admin";
 
 import Navbar from "./components/Navbar";
 import { useAuth } from "./context/AuthContext";
@@ -41,6 +42,16 @@ function ProtectedRoute({
       {children}
     </>
   );
+}
+
+function AdminRoute({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+
+  if (!user || user.role !== "admin") {
+    return <Navigate to="/" replace />;
+  }
+
+  return <>{children}</>;
 }
 
 function App() {
@@ -156,6 +167,17 @@ function App() {
           element={
             <ProtectedRoute>
               <Notes />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute>
+              <AdminRoute>
+                <Admin />
+              </AdminRoute>
             </ProtectedRoute>
           }
         />

@@ -36,9 +36,15 @@ function DocumentChat() {
       });
 
       setUploaded(true);
-    } catch (error) {
+      setError("");
+    } catch (error: any) {
       console.error(error);
-      setError("Failed to upload PDF.");
+
+      setError(
+        error.response?.data?.detail ||
+          error.response?.data?.message ||
+          "Failed to upload PDF. Make sure the AI (RAG) service is running."
+      );
     } finally {
       setUploading(false);
     }
@@ -73,9 +79,13 @@ function DocumentChat() {
           content: response.data.answer,
         },
       ]);
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      setError("Failed to get an answer.");
+      setError(
+        error.response?.data?.detail ||
+          error.response?.data?.message ||
+          "Failed to get an answer."
+      );
     } finally {
       setAsking(false);
     }
@@ -151,7 +161,11 @@ function DocumentChat() {
                 className={`chat-message ${message.role}`}
               >
                 <div className="chat-bubble">
-                  {message.content}
+                  <p
+                    style={{ whiteSpace: "pre-wrap", margin: 0 }}
+                  >
+                    {message.content}
+                  </p>
                 </div>
               </div>
             ))}

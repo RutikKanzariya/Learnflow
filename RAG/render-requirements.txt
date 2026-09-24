@@ -7,6 +7,8 @@ python-dotenv
 python-multipart
 langchain-core
 langchain-text-splitters
-langchain-google-genai
+langchain-openai
+openai
 langchain-chroma
 pypdf
+sentence-transformers

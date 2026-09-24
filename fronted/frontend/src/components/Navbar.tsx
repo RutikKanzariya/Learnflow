@@ -38,6 +38,10 @@ function Navbar() {
 
   <Link to="/notes">Notes</Link>
 
+  {user?.role === "admin" && (
+    <Link to="/admin">Admin</Link>
+  )}
+
   <span>
     👋 {user?.name}
   </span>

@@ -6,6 +6,7 @@ function Register() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [adminKey, setAdminKey] = useState("");
 
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState<
@@ -26,6 +27,7 @@ function Register() {
         name,
         email,
         password,
+        adminKey: adminKey.trim() || undefined,
       });
 
       const { user } = response.data;
@@ -86,6 +88,15 @@ function Register() {
             }
             minLength={6}
             required
+          />
+
+          <input
+            type="text"
+            placeholder="Admin key (optional — for admin accounts)"
+            value={adminKey}
+            onChange={(event) =>
+              setAdminKey(event.target.value)
+            }
           />
 
           <button type="submit" disabled={loading}>
