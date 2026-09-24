@@ -60,7 +60,7 @@ services:
       - key: GROQ_BASE_URL
         value: https://api.groq.com/openai/v1
       - key: EMBEDDING_PROVIDER
-        value: local # "local" = sentence-transformers, no extra API key needed
+        value: onnx # ChromaDB bundled ONNX MiniLM - light, no PyTorch (avoids free-tier OOM)
       - key: CHROMA_DB_DIR
         value: chroma-db # local dir on free tier; use disk mount path on paid plans
       - key: ALLOWED_ORIGINS

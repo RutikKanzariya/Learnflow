@@ -52,14 +52,47 @@ def get_llm(**kwargs):
     )
 
 
+def get_onnx_embeddings():
+    """Very light local embeddings using ChromaDB's bundled ONNX MiniLM
+    model (all-MiniLM-L6-v2, 384 dims).
+
+    Runs on onnxruntime only - no PyTorch - so it fits comfortably inside
+    Render's 512 MB free tier. Use EMBEDDING_PROVIDER=onnx in production.
+    """
+    from chromadb.utils import embedding_functions
+
+    class OnnxMiniLMEmbeddings:
+        def __init__(self):
+            self._fn = embedding_functions.ONNXMiniLM_L6_V2()
+
+        def embed_documents(self, texts):
+            return self._fn(texts)
+
+        def embed_query(self, text):
+            return self._fn([text])[0]
+
+        def __call__(self, texts):
+            return self._fn(texts)
+
+    return OnnxMiniLMEmbeddings()
+
+
 def get_embeddings():
     """Return an embedding model.
 
-    "local" (default) uses sentence-transformers so no external embedding
-    API is required. Groq does not expose an embeddings endpoint, so this
-    is the recommended (and only reliable) option.
+    "onnx" (recommended for Render) uses ChromaDB's bundled ONNX MiniLM
+    model - no PyTorch, tiny memory footprint.
+
+    "local" uses sentence-transformers (heavier, best for local dev).
+
+    "openai" uses an OpenAI-compatible embeddings endpoint. Groq does not
+    expose an embeddings endpoint, so "onnx"/"local" are the reliable
+    options for this project.
     """
     provider = os.getenv("EMBEDDING_PROVIDER", "local").strip().lower()
+
+    if provider == "onnx":
+        return get_onnx_embeddings()
 
     if provider == "openai":
         from langchain_openai import OpenAIEmbeddings

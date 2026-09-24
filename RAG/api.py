@@ -81,29 +81,43 @@ def health():
 
 # -----------------------------
 # RAG SETUP
+#
+# Everything here is created lazily (on first use) so that importing the
+# app stays tiny. That stops the free-tier Render instance from running
+# out of memory while uvicorn is still starting up.
 # -----------------------------
 
-embedding_model = get_embeddings()
+_embedding_model = None
+_vector_store = None
 
 
-def _create_vector_store():
-    return Chroma(
-        collection_name=COLLECTION_NAME,
-        embedding_function=embedding_model,
-        persist_directory=CHROMA_DB_DIR,
-    )
+def get_embedding_model():
+    global _embedding_model
+    if _embedding_model is None:
+        _embedding_model = get_embeddings()
+    return _embedding_model
 
 
-vector_store = _create_vector_store()
+def get_vector_store():
+    global _vector_store
+    if _vector_store is None:
+        _vector_store = Chroma(
+            collection_name=COLLECTION_NAME,
+            embedding_function=get_embedding_model(),
+            persist_directory=CHROMA_DB_DIR,
+        )
+    return _vector_store
 
 
 def _reset_vector_store():
-    """Delete and recreate the collection.
-
-    Used when an incompatible index (different vector dimensions,
-    e.g. from a previous embedding provider) is detected.
+    """Delete the collection and drop the cached store so the next access
+    recreates it (used when an incompatible index - different vector
+    dimensions, e.g. from a previous embedding provider - is detected).
     """
-    global vector_store
+    global _vector_store
+
+    vector_store = get_vector_store()
+
     try:
         vector_store._client.delete_collection(
             vector_store._collection.name
@@ -111,7 +125,7 @@ def _reset_vector_store():
     except Exception:
         pass
 
-    vector_store = _create_vector_store()
+    _vector_store = None
 
 
 def _index_documents(chunk_docs):
@@ -121,26 +135,27 @@ def _index_documents(chunk_docs):
     (old embedding provider), reset it once and retry.
     """
     try:
-        vector_store.add_documents(chunk_docs)
+        get_vector_store().add_documents(chunk_docs)
     except Exception as error:
         message = str(error).lower()
 
         if "dimension" in message or "expected" in message:
             print("Vector store incompatible, resetting index.")
             _reset_vector_store()
-            vector_store.add_documents(chunk_docs)
+            get_vector_store().add_documents(chunk_docs)
         else:
             raise
 
 
-retriever = vector_store.as_retriever(
-    search_type="mmr",
-    search_kwargs={
-        "k": 4,
-        "fetch_k": 10,
-        "lambda_mult": 0.5,
-    },
-)
+def _make_retriever():
+    return get_vector_store().as_retriever(
+        search_type="mmr",
+        search_kwargs={
+            "k": 4,
+            "fetch_k": 10,
+            "lambda_mult": 0.5,
+        },
+    )
 
 
 llm = get_llm()
@@ -181,7 +196,7 @@ Question:
 def _retrieve(question):
     """Safely retrieve context for a question."""
     try:
-        docs = retriever.invoke(question)
+        docs = _make_retriever().invoke(question)
         return docs
     except Exception as error:
         print("Retrieval error:", str(error))

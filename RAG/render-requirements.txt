@@ -1,6 +1,11 @@
 # Minimal runtime dependencies for the RAG web service (free-tier / Render).
 # api.py imports ONLY these packages. The full local/Docker dev set lives in
 # requirements.txt (which adds sentence-transformers, torch, pymupdf, etc.).
+#
+# NOTE: sentence-transformers/torch are deliberately NOT here. On Render's
+# 512 MB free tier, importing torch at startup OOMs the service. Embeddings
+# run on ChromaDB's bundled ONNX MiniLM model (EMBEDDING_PROVIDER=onnx),
+# which only needs onnxruntime.
 fastapi
 uvicorn
 python-dotenv
@@ -10,5 +15,6 @@ langchain-text-splitters
 langchain-openai
 openai
 langchain-chroma
+chromadb
+onnxruntime
 pypdf
-sentence-transformers
